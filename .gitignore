@@ -1,0 +1,37 @@
+# Frontend
+node_modules/
+dist/
+*.local
+.DS_Store
+.env
+.env.local
+
+# Backend
+backend/target/
+*.jar
+*.class
+.classpath
+.project
+.settings/
+.springBeans
+*.jks
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.iml
+*.sublime-workspace
+
+# Operating System
+Thumbs.db
+.DS_Store
+*.log
+*.pid
+
+# Temporary files
+tmp/
+temp/
+*.tmp

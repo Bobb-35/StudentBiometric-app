@@ -1,0 +1,355 @@
+{
+  "info": {
+    "_postman_id": "biometric-attendance-api",
+    "name": "Biometric Attendance System API",
+    "description": "Complete API collection for Biometric Attendance System",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"admin@biometric.com\",\"password\":\"password\"}"
+            },
+            "url": {
+              "raw": "http://localhost:8080/api/auth/login",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["api", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"newuser@biometric.com\",\"password\":\"password\",\"name\":\"New User\",\"role\":\"STUDENT\"}"
+            },
+            "url": {
+              "raw": "http://localhost:8080/api/auth/register",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["api", "auth", "register"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get All Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/users",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["api", "users"]
+            }
+          }
+        },
+        {
+          "name": "Get User by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/users/1",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["api", "users", "1"]
+            }
+          }
+        },
+        {
+          "name": "Get Users by Role",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/users/role/STUDENT",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["api", "users", "role", "STUDENT"]
+            }
+          }
+        },
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"test@biometric.com\",\"password\":\"password\",\"name\":\"Test User\",\"role\":\"STUDENT\",\"department\":\"Computer Science\"}"
+            },
+            "url": {
+              "raw": "http://localhost:8080/api/users",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["api", "users"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Courses",
+      "item": [
+        {
+          "name": "Get All Courses",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/courses",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["api", "courses"]
+            }
+          }
+        },
+        {
+          "name": "Get Course by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/courses/1",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["api", "courses", "1"]
+            }
+          }
+        },
+        {
+          "name": "Get Courses by Lecturer",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/courses/lecturer/2",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["api", "courses", "lecturer", "2"]
+            }
+          }
+        },
+        {
+          "name": "Create Course",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"code\":\"CS301\",\"name\":\"Advanced Programming\",\"lecturerId\":2,\"department\":\"Computer Science\",\"credits\":4,\"schedule\":\"MWF 14:00-15:00\",\"room\":\"Room 301\"}"
+            },
+            "url": {
+              "raw": "http://localhost:8080/api/courses",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["api", "courses"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Attendance Sessions",
+      "item": [
+        {
+          "name": "Get All Sessions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/sessions",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["api", "sessions"]
+            }
+          }
+        },
+        {
+          "name": "Get Sessions by Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/sessions/status/ACTIVE",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["api", "sessions", "status", "ACTIVE"]
+            }
+          }
+        },
+        {
+          "name": "Create Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"courseId\":1,\"lecturerId\":2,\"date\":\"2026-02-26\",\"startTime\":\"09:00\",\"biometricEnabled\":true,\"attendanceType\":\"BOTH\",\"status\":\"ACTIVE\"}"
+            },
+            "url": {
+              "raw": "http://localhost:8080/api/sessions",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["api", "sessions"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Attendance Records",
+      "item": [
+        {
+          "name": "Get All Records",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/attendance",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["api", "attendance"]
+            }
+          }
+        },
+        {
+          "name": "Get Student Records",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/attendance/student/3",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["api", "attendance", "student", "3"]
+            }
+          }
+        },
+        {
+          "name": "Mark Attendance",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"studentId\":3,\"courseId\":1,\"sessionId\":1,\"method\":\"FINGERPRINT\",\"status\":\"PRESENT\",\"verificationScore\":95.5}"
+            },
+            "url": {
+              "raw": "http://localhost:8080/api/attendance",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["api", "attendance"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Biometric",
+      "item": [
+        {
+          "name": "Get Enrollment Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/biometric/user/3",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["api", "biometric", "user", "3"]
+            }
+          }
+        },
+        {
+          "name": "Enroll Biometric",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"userId\":3,\"fingerprintEnrolled\":true,\"faceEnrolled\":true}"
+            },
+            "url": {
+              "raw": "http://localhost:8080/api/biometric/enroll",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["api", "biometric", "enroll"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
