@@ -18,10 +18,13 @@ import java.util.Arrays;
 public class SecurityConfig {
     @Value("${cors.allowed-origins:http://localhost:5173,http://localhost:3000}")
     private String allowedOrigins;
+
+    @Value("${security.password.bcrypt-strength:12}")
+    private int bcryptStrength;
     
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+        return new BCryptPasswordEncoder(bcryptStrength);
     }
     
     @Bean
