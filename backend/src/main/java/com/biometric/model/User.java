@@ -4,7 +4,15 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "users")
+@Table(
+    name = "users",
+    indexes = {
+        @Index(name = "idx_user_email", columnList = "email"),
+        @Index(name = "idx_user_role", columnList = "role"),
+        @Index(name = "idx_user_student_id", columnList = "student_id"),
+        @Index(name = "idx_user_staff_id", columnList = "staff_id")
+    }
+)
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,10 +31,18 @@ public class User {
     @Enumerated(EnumType.STRING)
     private UserRole role;
 
+    @Column(name = "student_id")
     private String studentId;
+
+    @Column(name = "staff_id")
     private String staffId;
+
     private String department;
+
+    @Column(name = "fingerprint_id")
     private String fingerprintId;
+
+    @Column(name = "face_id")
     private String faceId;
     private String avatar;
 

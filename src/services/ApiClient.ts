@@ -42,8 +42,21 @@ class ApiClient {
         const error = await response.json().catch(() => ({}));
         throw new Error(error.message || `HTTP ${response.status}`);
       }
+      if (response.status === 204) {
+        return null as T;
+      }
 
-      return await response.json();
+      const contentType = response.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        return null as T;
+      }
+
+      const text = await response.text();
+      if (!text) {
+        return null as T;
+      }
+
+      return JSON.parse(text) as T;
     } catch (error) {
       console.error(`API Error [${method} ${endpoint}]:`, error);
       throw error;

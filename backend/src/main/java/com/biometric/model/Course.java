@@ -2,10 +2,16 @@ package com.biometric.model;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Entity
-@Table(name = "courses")
+@Table(
+    name = "courses",
+    indexes = {
+        @Index(name = "idx_course_code", columnList = "code"),
+        @Index(name = "idx_course_lecturer_id", columnList = "lecturer_id"),
+        @Index(name = "idx_course_department", columnList = "department")
+    }
+)
 public class Course {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -17,7 +23,7 @@ public class Course {
     @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false)
+    @Column(name = "lecturer_id", nullable = false)
     private Long lecturerId;
 
     @Column(nullable = false)

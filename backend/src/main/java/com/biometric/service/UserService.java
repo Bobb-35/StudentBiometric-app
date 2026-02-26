@@ -3,6 +3,8 @@ package com.biometric.service;
 import com.biometric.model.User;
 import com.biometric.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import java.util.List;
@@ -48,6 +50,10 @@ public class UserService {
 
     public List<User> getAllUsers() {
         return userRepository.findAll();
+    }
+
+    public Page<User> getUsersPage(Pageable pageable) {
+        return userRepository.findAll(pageable);
     }
 
     public boolean verifyPassword(String rawPassword, String encodedPassword) {

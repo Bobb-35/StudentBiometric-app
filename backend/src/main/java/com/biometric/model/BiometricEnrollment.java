@@ -4,13 +4,18 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "biometric_enrollments")
+@Table(
+    name = "biometric_enrollments",
+    indexes = {
+        @Index(name = "idx_biometric_user_id", columnList = "user_id")
+    }
+)
 public class BiometricEnrollment {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(name = "user_id", nullable = false, unique = true)
     private Long userId;
 
     @Column(nullable = false)

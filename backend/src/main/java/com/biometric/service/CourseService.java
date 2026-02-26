@@ -3,6 +3,8 @@ package com.biometric.service;
 import com.biometric.model.Course;
 import com.biometric.repository.CourseRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
@@ -34,6 +36,10 @@ public class CourseService {
 
     public List<Course> getAllCourses() {
         return courseRepository.findAll();
+    }
+
+    public Page<Course> getCoursesPage(Pageable pageable) {
+        return courseRepository.findAll(pageable);
     }
 
     public Course updateCourse(Long id, Course courseDetails) {

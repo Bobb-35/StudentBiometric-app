@@ -35,6 +35,11 @@ interface AppContextType {
 }
 
 const AppContext = createContext<AppContextType | null>(null);
+const DATA_SYNC_KEY = 'attendance_data_version';
+const REFRESH_POLL_INTERVAL_MS = 5000;
+
+const sortByNumericId = <T extends { id?: number | string }>(items: T[]): T[] =>
+  [...items].sort((a, b) => Number(a.id ?? 0) - Number(b.id ?? 0));
 
 const toRole = (role: unknown): 'admin' | 'lecturer' | 'student' => {
   const value = String(role || '').toLowerCase();
@@ -197,6 +202,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem('currentUser', JSON.stringify(currentUser));
   }, [currentUser]);
 
+  const bumpDataVersion = () => {
+    localStorage.setItem(DATA_SYNC_KEY, String(Date.now()));
+  };
+
   const syncCurrentUser = (nextUsers: User[]) => {
     if (!currentUser) return;
     const updated = nextUsers.find(u => u.id === currentUser.id);
@@ -254,9 +263,52 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       : [];
 
     setEnrollments(normalizedEnrollments);
-    setUsers(normalizedUsers);
-    setCourses(normalizedCourses);
+    setUsers(sortByNumericId(normalizedUsers));
+    setCourses(sortByNumericId(normalizedCourses));
     syncCurrentUser(normalizedUsers);
+  };
+
+  const refreshAllData = async () => {
+    const [usersResult, coursesResult, sessionsResult, recordsResult, enrollmentsResult] =
+      await Promise.allSettled([
+        apiClient.users.getAll(),
+        apiClient.courses.getAll(),
+        apiClient.sessions.getAll(),
+        apiClient.attendance.getAll(),
+        apiClient.enrollments.getAll(),
+      ]);
+
+    const resolvedEnrollments =
+      enrollmentsResult.status === 'fulfilled' && Array.isArray(enrollmentsResult.value)
+        ? enrollmentsResult.value
+        : [];
+    const normalizedEnrollments = resolvedEnrollments.map(normalizeEnrollment);
+
+    if (usersResult.status === 'fulfilled' && Array.isArray(usersResult.value)) {
+      const normalizedUsers = sortByNumericId(
+        usersResult.value.map((u: any) => normalizeUser(u, normalizedEnrollments)),
+      );
+      setUsers(normalizedUsers);
+      syncCurrentUser(normalizedUsers);
+    }
+
+    if (coursesResult.status === 'fulfilled' && Array.isArray(coursesResult.value)) {
+      setCourses(
+        sortByNumericId(
+          coursesResult.value.map((c: any) => normalizeCourse(c, normalizedEnrollments)),
+        ),
+      );
+    }
+
+    if (sessionsResult.status === 'fulfilled' && Array.isArray(sessionsResult.value)) {
+      setSessions(sortByNumericId(sessionsResult.value.map(normalizeSession)));
+    }
+
+    if (recordsResult.status === 'fulfilled' && Array.isArray(recordsResult.value)) {
+      setRecords(sortByNumericId(recordsResult.value.map(normalizeRecord)));
+    }
+
+    setEnrollments(normalizedEnrollments);
   };
 
   const fetchUsers = async () => {
@@ -314,36 +366,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       try {
         setIsLoading(true);
         setError(null);
-        const [usersData, coursesData, sessionsData, recordsData, enrollmentData] = await Promise.all([
-          apiClient.users.getAll().catch(() => []),
-          apiClient.courses.getAll().catch(() => []),
-          apiClient.sessions.getAll().catch(() => []),
-          apiClient.attendance.getAll().catch(() => []),
-          apiClient.enrollments.getAll().catch(() => []),
-        ]);
-
-        const normalizedEnrollments = Array.isArray(enrollmentData)
-          ? enrollmentData.map(normalizeEnrollment)
-          : [];
-        const normalizedUsers = Array.isArray(usersData)
-          ? usersData.map((u: any) => normalizeUser(u, normalizedEnrollments))
-          : [];
-        const normalizedCourses = Array.isArray(coursesData)
-          ? coursesData.map((c: any) => normalizeCourse(c, normalizedEnrollments))
-          : [];
-        const normalizedSessions = Array.isArray(sessionsData)
-          ? sessionsData.map(normalizeSession)
-          : [];
-        const normalizedRecords = Array.isArray(recordsData)
-          ? recordsData.map(normalizeRecord)
-          : [];
-
-        setEnrollments(normalizedEnrollments);
-        setUsers(normalizedUsers);
-        setCourses(normalizedCourses);
-        setSessions(normalizedSessions);
-        setRecords(normalizedRecords);
-        syncCurrentUser(normalizedUsers);
+        await refreshAllData();
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load initial data');
       } finally {
@@ -352,6 +375,25 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     };
 
     loadInitialData();
+  }, []);
+
+  useEffect(() => {
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === DATA_SYNC_KEY) {
+        refreshAllData().catch(() => {});
+      }
+    };
+
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      refreshAllData().catch(() => {});
+    }, REFRESH_POLL_INTERVAL_MS);
+
+    return () => window.clearInterval(timer);
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
@@ -416,6 +458,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       });
       applyEnrollmentLocal(studentId, courseId);
       await refreshUsersCoursesEnrollments().catch(() => {});
+      bumpDataVersion();
     } catch (err) {
       // Fallback: keep student flow working when enrollment endpoint is unavailable.
       applyEnrollmentLocal(studentId, courseId);
@@ -434,6 +477,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         const next = prev.filter(s => s.id !== normalized.id);
         return [...next, normalized];
       });
+      await refreshAllData().catch(() => {});
+      bumpDataVersion();
       return normalized;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create session');
@@ -452,7 +497,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           ...toBackendSession(session),
           status: 'CLOSED',
         });
-        await fetchSessions();
+        await refreshAllData();
+        bumpDataVersion();
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to close session');
@@ -465,7 +511,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     try {
       setIsLoading(true);
       await apiClient.attendance.create(toBackendRecord(record));
-      await fetchRecords();
+      await refreshAllData();
+      bumpDataVersion();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create record');
     } finally {
@@ -477,7 +524,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     try {
       setIsLoading(true);
       await apiClient.users.create(toBackendUser(user));
-      await refreshUsersCoursesEnrollments();
+      await refreshAllData();
+      bumpDataVersion();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create user');
     } finally {
@@ -489,7 +537,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     try {
       setIsLoading(true);
       await apiClient.users.update(Number(user.id), toBackendUser(user));
-      await refreshUsersCoursesEnrollments();
+      await refreshAllData();
+      bumpDataVersion();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update user');
     } finally {
@@ -501,7 +550,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     try {
       setIsLoading(true);
       await apiClient.users.delete(Number(userId));
-      await refreshUsersCoursesEnrollments();
+      await refreshAllData();
+      bumpDataVersion();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete user');
     } finally {
@@ -513,7 +563,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     try {
       setIsLoading(true);
       await apiClient.courses.create(toBackendCourse(course));
-      await refreshUsersCoursesEnrollments();
+      await refreshAllData();
+      bumpDataVersion();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create course');
     } finally {
@@ -525,7 +576,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     try {
       setIsLoading(true);
       await apiClient.courses.update(Number(course.id), toBackendCourse(course));
-      await refreshUsersCoursesEnrollments();
+      await refreshAllData();
+      bumpDataVersion();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update course');
     } finally {
@@ -537,7 +589,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     try {
       setIsLoading(true);
       await apiClient.courses.delete(Number(courseId));
-      await refreshUsersCoursesEnrollments();
+      await refreshAllData();
+      bumpDataVersion();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete course');
     } finally {

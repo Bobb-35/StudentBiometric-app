@@ -4,16 +4,24 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "attendance_sessions")
+@Table(
+    name = "attendance_sessions",
+    indexes = {
+        @Index(name = "idx_session_course_id", columnList = "course_id"),
+        @Index(name = "idx_session_lecturer_id", columnList = "lecturer_id"),
+        @Index(name = "idx_session_date", columnList = "date"),
+        @Index(name = "idx_session_status", columnList = "status")
+    }
+)
 public class AttendanceSession {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(name = "course_id", nullable = false)
     private Long courseId;
 
-    @Column(nullable = false)
+    @Column(name = "lecturer_id", nullable = false)
     private Long lecturerId;
 
     @Column(nullable = false)

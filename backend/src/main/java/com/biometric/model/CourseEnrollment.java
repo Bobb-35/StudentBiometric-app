@@ -4,16 +4,25 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "course_enrollments")
+@Table(
+    name = "course_enrollments",
+    uniqueConstraints = {
+        @UniqueConstraint(name = "uk_student_course", columnNames = {"student_id", "course_id"})
+    },
+    indexes = {
+        @Index(name = "idx_enrollment_student_id", columnList = "student_id"),
+        @Index(name = "idx_enrollment_course_id", columnList = "course_id")
+    }
+)
 public class CourseEnrollment {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(name = "student_id", nullable = false)
     private Long studentId;
 
-    @Column(nullable = false)
+    @Column(name = "course_id", nullable = false)
     private Long courseId;
 
     @Column(name = "enrolled_at")

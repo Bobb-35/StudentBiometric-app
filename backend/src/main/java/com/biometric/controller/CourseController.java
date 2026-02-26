@@ -3,6 +3,9 @@ package com.biometric.controller;
 import com.biometric.model.Course;
 import com.biometric.service.CourseService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
@@ -17,6 +20,18 @@ public class CourseController {
     @GetMapping
     public ResponseEntity<List<Course>> getAllCourses() {
         return ResponseEntity.ok(courseService.getAllCourses());
+    }
+
+    @GetMapping("/page")
+    public ResponseEntity<Page<Course>> getCoursesPage(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "100") int size,
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "asc") String sortDir) {
+        Sort.Direction direction =
+                "desc".equalsIgnoreCase(sortDir) ? Sort.Direction.DESC : Sort.Direction.ASC;
+        return ResponseEntity.ok(
+                courseService.getCoursesPage(PageRequest.of(page, size, Sort.by(direction, sortBy))));
     }
 
     @GetMapping("/{id}")
