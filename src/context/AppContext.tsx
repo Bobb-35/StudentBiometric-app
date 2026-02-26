@@ -10,6 +10,7 @@ interface EnrollmentLink {
 
 interface AppContextType {
   currentUser: User | null;
+  isAuthenticated: boolean;
   users: User[];
   courses: Course[];
   sessions: AttendanceSession[];
@@ -182,6 +183,7 @@ const toBackendRecord = (record: AttendanceRecord) => ({
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const [users, setUsers] = useState<User[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
@@ -419,6 +421,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           enrolledCourses,
         };
         setCurrentUser(user);
+        setIsAuthenticated(true);
         return true;
       }
 
@@ -435,6 +438,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = () => {
     setCurrentUser(null);
+    setIsAuthenticated(false);
     apiClient.clearToken();
   };
 
@@ -596,6 +600,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     <AppContext.Provider
       value={{
         currentUser,
+        isAuthenticated,
         users,
         courses,
         sessions,

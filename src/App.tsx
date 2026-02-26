@@ -8,10 +8,10 @@ import StudentDashboard from './components/student/StudentDashboard';
 import { LayoutDashboard } from 'lucide-react';
 
 function AppContent() {
-  const { currentUser } = useApp();
+  const { currentUser, isAuthenticated } = useApp();
   const [activeTab, setActiveTab] = useState('dashboard');
 
-  if (!currentUser) return <Login />;
+  if (!isAuthenticated || !currentUser) return <Login />;
 
   const tabs = [
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
