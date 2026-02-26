@@ -29,12 +29,6 @@ export default function Login() {
     setError('Biometric device not detected. Use credentials instead.');
   };
 
-  const demoAccounts = [
-    { label: 'Admin', email: 'admin@biometric.com', password: 'admin123', color: 'bg-purple-600' },
-    { label: 'Lecturer', email: 'lecturer1@biometric.com', password: 'lecturer123', color: 'bg-blue-600' },
-    { label: 'Student', email: 'student1@biometric.com', password: 'student123', color: 'bg-emerald-600' },
-  ];
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-indigo-900 flex flex-col items-center justify-center p-4">
       {/* Background Pattern */}
@@ -135,20 +129,6 @@ export default function Login() {
             )}
           </button>
 
-          {/* Demo Accounts */}
-          <div className="mt-6 pt-5 border-t border-white/10">
-            <p className="text-blue-300/70 text-xs text-center mb-3">Demo Quick Login</p>
-            <div className="grid grid-cols-3 gap-2">
-              {demoAccounts.map(acc => (
-                <button key={acc.label}
-                  onClick={() => { setEmail(acc.email); setPassword(acc.password); }}
-                  className={`${acc.color} text-white text-xs font-medium py-2 px-3 rounded-lg hover:opacity-90 transition`}>
-                  {acc.label}
-                </button>
-              ))}
-            </div>
-            <p className="text-blue-300/50 text-xs text-center mt-2">Click a role to auto-fill credentials</p>
-          </div>
         </div>
 
         <p className="text-center text-blue-400/50 text-xs mt-6">
