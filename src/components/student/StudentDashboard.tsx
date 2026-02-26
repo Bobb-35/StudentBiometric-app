@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { Fingerprint, Camera, CheckCircle, XCircle, Clock, BookOpen, TrendingUp, AlertTriangle, Shield, User } from 'lucide-react';
 import { AttendanceRecord } from '../../types';
 import { authenticateWithDeviceBiometrics } from '../../utils/deviceBiometric';
+import { apiClient } from '../../services/ApiClient';
 
 export default function StudentDashboard() {
   const { currentUser, courses, sessions, records, addRecord, enrollCourse } = useApp();
@@ -12,18 +13,71 @@ export default function StudentDashboard() {
   const [scanResult, setScanResult] = useState<{ success: boolean; message: string; status?: string } | null>(null);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [scanMethod, setScanMethod] = useState<'fingerprint' | 'face'>('fingerprint');
+  const [biometricEnrollment, setBiometricEnrollment] = useState({ fingerprintEnrolled: false, faceEnrolled: false });
+  const [enrollingMethod, setEnrollingMethod] = useState<'fingerprint' | 'face' | null>(null);
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
 
   const myEnrolled = currentUser?.enrolledCourses || [];
   const myCourses = courses.filter(c => myEnrolled.includes(c.id));
   const availableCourses = courses.filter(c => !myEnrolled.includes(c.id));
   const myRecords = records.filter(r => r.studentId === currentUser?.id);
   const activeSessions = sessions.filter(s => s.status === 'active' && myEnrolled.includes(s.courseId));
+  const hasAnyBiometricEnrollment = biometricEnrollment.fingerprintEnrolled || biometricEnrollment.faceEnrolled;
 
   const getAttendancePct = (courseId: string) => {
     const courseSessions = sessions.filter(s => s.courseId === courseId && s.status === 'closed');
     if (courseSessions.length === 0) return 0;
     const attended = myRecords.filter(r => r.courseId === courseId && r.status !== 'absent').length;
     return Math.min(Math.round((attended / courseSessions.length) * 100), 100);
+  };
+
+  const loadBiometricEnrollment = async () => {
+    if (!currentUser?.id) return;
+    try {
+      const enrollment = await apiClient.biometric.getEnrollment(Number(currentUser.id));
+      setBiometricEnrollment({
+        fingerprintEnrolled: Boolean(enrollment?.fingerprintEnrolled),
+        faceEnrolled: Boolean(enrollment?.faceEnrolled),
+      });
+    } catch {
+      setBiometricEnrollment({ fingerprintEnrolled: false, faceEnrolled: false });
+    }
+  };
+
+  useEffect(() => {
+    loadBiometricEnrollment().catch(() => {});
+  }, [currentUser?.id]);
+
+  const handleEnrollBiometric = async (method: 'fingerprint' | 'face') => {
+    if (!currentUser) return;
+
+    try {
+      setEnrollingMethod(method);
+      setActionMessage(null);
+      await authenticateWithDeviceBiometrics(currentUser.id, currentUser.name);
+
+      const nextEnrollment = {
+        fingerprintEnrolled: biometricEnrollment.fingerprintEnrolled || method === 'fingerprint',
+        faceEnrolled: biometricEnrollment.faceEnrolled || method === 'face',
+      };
+
+      try {
+        await apiClient.biometric.updateEnrollment(Number(currentUser.id), nextEnrollment);
+      } catch {
+        await apiClient.biometric.enroll({
+          userId: Number(currentUser.id),
+          fingerprintEnrolled: nextEnrollment.fingerprintEnrolled,
+          faceEnrolled: nextEnrollment.faceEnrolled,
+        });
+      }
+
+      setBiometricEnrollment(nextEnrollment);
+      setActionMessage(`${method === 'fingerprint' ? 'Fingerprint' : 'Face'} enrolled successfully.`);
+    } catch (err) {
+      setActionMessage(err instanceof Error ? err.message : 'Biometric enrollment failed. Please retry.');
+    } finally {
+      setEnrollingMethod(null);
+    }
   };
 
   const handleBiometricScan = async () => {
@@ -34,6 +88,15 @@ export default function StudentDashboard() {
     const alreadySigned = records.some(r => r.studentId === currentUser?.id && r.sessionId === selectedSessionId);
     if (alreadySigned) {
       setScanResult({ success: false, message: 'You have already signed in for this session!' });
+      return;
+    }
+
+    if (scanMethod === 'fingerprint' && !biometricEnrollment.fingerprintEnrolled) {
+      setScanResult({ success: false, message: 'Enroll fingerprint first before signing attendance.' });
+      return;
+    }
+    if (scanMethod === 'face' && !biometricEnrollment.faceEnrolled) {
+      setScanResult({ success: false, message: 'Enroll face recognition first before signing attendance.' });
       return;
     }
 
@@ -223,6 +286,11 @@ export default function StudentDashboard() {
                       </div>
                       <button
                         onClick={async () => {
+                          if (!hasAnyBiometricEnrollment) {
+                            setActionMessage('Please enroll biometrics first before enrolling in a course.');
+                            setActiveView('profile');
+                            return;
+                          }
                           await enrollCourse(course.id);
                         }}
                         className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-4 py-2 rounded-xl transition whitespace-nowrap ml-2"
@@ -293,6 +361,11 @@ export default function StudentDashboard() {
 
                 {selectedSessionId && !records.some(r => r.studentId === currentUser?.id && r.sessionId === selectedSessionId) && (
                   <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
+                    {!hasAnyBiometricEnrollment && (
+                      <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-700">
+                        Enroll at least one biometric method in Profile before signing attendance.
+                      </div>
+                    )}
                     <h3 className="font-semibold text-slate-800 mb-4">Choose Biometric Method</h3>
                     <div className="grid grid-cols-2 gap-3 mb-6">
                       {(['fingerprint', 'face'] as const).map(method => (
@@ -422,27 +495,50 @@ export default function StudentDashboard() {
               <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
                 <Shield className="w-5 h-5 text-blue-500" /> Biometric Enrollment
               </h3>
+              {actionMessage && (
+                <div className="mb-3 text-xs rounded-lg px-3 py-2 bg-blue-50 text-blue-700 border border-blue-200">
+                  {actionMessage}
+                </div>
+              )}
               <div className="space-y-3">
                 <div className="flex items-center justify-between p-3 bg-blue-50 rounded-xl">
                   <div className="flex items-center gap-3">
                     <Fingerprint className="w-5 h-5 text-blue-600" />
                     <span className="text-sm font-medium text-slate-800">Fingerprint</span>
                   </div>
-                  <span className={`text-xs px-2 py-1 rounded-full font-medium ${currentUser?.fingerprintId ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-                    {currentUser?.fingerprintId ? '✓ Enrolled' : 'Not Enrolled'}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${biometricEnrollment.fingerprintEnrolled ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                      {biometricEnrollment.fingerprintEnrolled ? 'Enrolled' : 'Not Enrolled'}
+                    </span>
+                    <button
+                      onClick={() => handleEnrollBiometric('fingerprint')}
+                      disabled={enrollingMethod !== null}
+                      className="text-xs px-2 py-1 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
+                    >
+                      {enrollingMethod === 'fingerprint' ? 'Enrolling...' : 'Enroll'}
+                    </button>
+                  </div>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-purple-50 rounded-xl">
                   <div className="flex items-center gap-3">
                     <Camera className="w-5 h-5 text-purple-600" />
                     <span className="text-sm font-medium text-slate-800">Face Recognition</span>
                   </div>
-                  <span className={`text-xs px-2 py-1 rounded-full font-medium ${currentUser?.faceId ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-                    {currentUser?.faceId ? '✓ Enrolled' : 'Not Enrolled'}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${biometricEnrollment.faceEnrolled ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                      {biometricEnrollment.faceEnrolled ? 'Enrolled' : 'Not Enrolled'}
+                    </span>
+                    <button
+                      onClick={() => handleEnrollBiometric('face')}
+                      disabled={enrollingMethod !== null}
+                      className="text-xs px-2 py-1 rounded-lg bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-60"
+                    >
+                      {enrollingMethod === 'face' ? 'Enrolling...' : 'Enroll'}
+                    </button>
+                  </div>
                 </div>
               </div>
-              <p className="text-xs text-slate-400 mt-3">Contact admin to update biometric enrollment</p>
+              <p className="text-xs text-slate-400 mt-3">Enroll biometrics here before joining or signing course sessions.</p>
             </div>
           </div>
         )}
@@ -450,3 +546,5 @@ export default function StudentDashboard() {
     </div>
   );
 }
+
+
