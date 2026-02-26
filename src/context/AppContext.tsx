@@ -181,14 +181,7 @@ const toBackendRecord = (record: AttendanceRecord) => ({
 });
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
-  const [currentUser, setCurrentUser] = useState<User | null>(() => {
-    try {
-      const stored = localStorage.getItem('currentUser');
-      return stored ? JSON.parse(stored) : null;
-    } catch {
-      return null;
-    }
-  });
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   const [users, setUsers] = useState<User[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
@@ -199,8 +192,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    localStorage.setItem('currentUser', JSON.stringify(currentUser));
-  }, [currentUser]);
+    // Always require explicit login on each app load.
+    localStorage.removeItem('currentUser');
+  }, []);
 
   const bumpDataVersion = () => {
     localStorage.setItem(DATA_SYNC_KEY, String(Date.now()));
