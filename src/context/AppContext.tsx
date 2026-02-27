@@ -37,7 +37,7 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | null>(null);
 const DATA_SYNC_KEY = 'attendance_data_version';
-const REFRESH_POLL_INTERVAL_MS = 5000;
+const REFRESH_POLL_INTERVAL_MS = 2000;
 
 const sortByNumericId = <T extends { id?: number | string }>(items: T[]): T[] =>
   [...items].sort((a, b) => Number(a.id ?? 0) - Number(b.id ?? 0));
@@ -390,6 +390,22 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }, REFRESH_POLL_INTERVAL_MS);
 
     return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    const refreshOnFocus = () => {
+      if (!document.hidden) {
+        refreshAllData().catch(() => {});
+      }
+    };
+
+    window.addEventListener('focus', refreshOnFocus);
+    document.addEventListener('visibilitychange', refreshOnFocus);
+
+    return () => {
+      window.removeEventListener('focus', refreshOnFocus);
+      document.removeEventListener('visibilitychange', refreshOnFocus);
+    };
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { Users, BookOpen, ClipboardList, TrendingUp, Shield, Activity, UserCheck, AlertCircle, Plus, Trash2, X, Check } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
@@ -20,16 +20,64 @@ export default function AdminDashboard() {
   const totalSessions = sessions.length;
   const totalRecords = records.length;
 
-  const attendanceByDay = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map((day) => ({
-    day,
-    present: Math.floor(Math.random() * 20) + 25,
-    absent: Math.floor(Math.random() * 8) + 2,
-  }));
+  const attendanceByDay = useMemo(() => {
+    const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'] as const;
+    const now = new Date();
+    const monday = new Date(now);
+    monday.setHours(0, 0, 0, 0);
+    monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+
+    return labels.map((label, index) => {
+      const currentDay = new Date(monday);
+      currentDay.setDate(monday.getDate() + index);
+      const dateKey = currentDay.toISOString().split('T')[0];
+      const daySessions = sessions.filter(s => s.date === dateKey);
+
+      let present = 0;
+      let absent = 0;
+
+      daySessions.forEach(session => {
+        const course = courses.find(c => c.id === session.courseId);
+        const enrolled = course?.enrolledStudents.length || 0;
+        const signedIn = new Set(
+          records
+            .filter(
+              r =>
+                r.sessionId === session.id &&
+                (r.status === 'present' || r.status === 'late'),
+            )
+            .map(r => r.studentId),
+        );
+
+        present += signedIn.size;
+        absent += Math.max(enrolled - signedIn.size, 0);
+      });
+
+      return { day: label, present, absent };
+    });
+  }, [courses, records, sessions]);
+
+  const totalAbsent = useMemo(() => {
+    return sessions.reduce((sum, session) => {
+      const course = courses.find(c => c.id === session.courseId);
+      const enrolled = course?.enrolledStudents.length || 0;
+      const signedIn = new Set(
+        records
+          .filter(
+            r =>
+              r.sessionId === session.id &&
+              (r.status === 'present' || r.status === 'late'),
+          )
+          .map(r => r.studentId),
+      );
+      return sum + Math.max(enrolled - signedIn.size, 0);
+    }, 0);
+  }, [courses, records, sessions]);
 
   const pieData = [
     { name: 'Present', value: records.filter(r => r.status === 'present').length },
     { name: 'Late', value: records.filter(r => r.status === 'late').length },
-    { name: 'Absent', value: 8 },
+    { name: 'Absent', value: totalAbsent },
   ];
 
   const handleAddUser = async () => {

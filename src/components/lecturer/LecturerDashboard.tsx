@@ -37,9 +37,9 @@ export default function LecturerDashboard() {
     }
   };
 
-  const endSession = () => {
+  const endSession = async () => {
     if (activeSessionId) {
-      closeSession(activeSessionId);
+      await closeSession(activeSessionId);
       setActiveSessionId(null);
       setActiveView('records');
       setSelectedSessionForRecords(activeSessionId);
@@ -79,7 +79,7 @@ export default function LecturerDashboard() {
         status: isLate ? 'late' : 'present',
         verificationScore: score,
       };
-      addRecord(record);
+      await addRecord(record);
       setScanResult({ success: true, message: `${student.name} — Verified! (${score}% match)`, studentName: student.name });
     } else {
       setScanResult({ success: false, message: `Biometric mismatch for ${student.name}. Please retry.` });
@@ -92,6 +92,93 @@ export default function LecturerDashboard() {
 
   const myCourseIds = myCourses.map(c => c.id);
   const mySessions = sessions.filter(s => myCourseIds.includes(s.courseId) && s.lecturerId === currentUser?.id);
+
+  const csvEscape = (value: string | number | undefined) => {
+    if (value == null) return '';
+    const str = String(value);
+    if (str.includes('"') || str.includes(',') || str.includes('\n')) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  };
+
+  const exportSessionReport = (sessionId: string) => {
+    const session = sessions.find(s => s.id === sessionId);
+    if (!session) return;
+
+    const course = courses.find(c => c.id === session.courseId);
+    const sessionRecords = getSessionRecords(sessionId);
+    const signedStudentIds = new Set(sessionRecords.map(r => r.studentId));
+    const absentIds = (course?.enrolledStudents || []).filter(id => !signedStudentIds.has(id));
+
+    const header = [
+      'Session ID',
+      'Course Code',
+      'Course Name',
+      'Date',
+      'Start Time',
+      'End Time',
+      'Student Name',
+      'Student ID',
+      'Status',
+      'Method',
+      'Timestamp',
+      'Verification Score',
+    ];
+
+    const presentOrLateRows = sessionRecords.map(rec => {
+      const student = users.find(u => u.id === rec.studentId);
+      return [
+        session.id,
+        course?.code || '',
+        course?.name || '',
+        session.date,
+        session.startTime,
+        session.endTime || '',
+        student?.name || 'Unknown',
+        student?.studentId || rec.studentId,
+        rec.status,
+        rec.method,
+        rec.timestamp,
+        rec.verificationScore ?? '',
+      ];
+    });
+
+    const absentRows = absentIds.map(studentId => {
+      const student = users.find(u => u.id === studentId);
+      return [
+        session.id,
+        course?.code || '',
+        course?.name || '',
+        session.date,
+        session.startTime,
+        session.endTime || '',
+        student?.name || 'Unknown',
+        student?.studentId || studentId,
+        'absent',
+        '',
+        '',
+        '',
+      ];
+    });
+
+    const csv = [header, ...presentOrLateRows, ...absentRows]
+      .map(row => row.map(value => csvEscape(value as string | number | undefined)).join(','))
+      .join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const safeCourseCode = (course?.code || 'attendance').replace(/[^a-zA-Z0-9_-]/g, '_');
+    const filename = `${safeCourseCode}_${session.date}_session_${session.id}.csv`;
+
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 sm:p-6">
@@ -376,7 +463,10 @@ export default function LecturerDashboard() {
                     </div>
                   </div>
 
-                  <button className="w-full bg-slate-900 text-white py-3 rounded-xl font-medium hover:bg-slate-800 transition flex items-center justify-center gap-2">
+                  <button
+                    onClick={() => exportSessionReport(selectedSessionForRecords!)}
+                    className="w-full bg-slate-900 text-white py-3 rounded-xl font-medium hover:bg-slate-800 transition flex items-center justify-center gap-2"
+                  >
                     <Download className="w-4 h-4" /> Export Attendance Report
                   </button>
                 </div>
