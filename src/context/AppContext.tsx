@@ -242,26 +242,35 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const refreshUsersCoursesEnrollments = async () => {
-    const [usersData, coursesData, enrollmentData] = await Promise.all([
-      apiClient.users.getAll().catch(() => []),
-      apiClient.courses.getAll().catch(() => []),
-      apiClient.enrollments.getAll().catch(() => []),
+    const [usersResult, coursesResult, enrollmentsResult] = await Promise.allSettled([
+      apiClient.users.getAll(),
+      apiClient.courses.getAll(),
+      apiClient.enrollments.getAll(),
     ]);
 
-    const normalizedEnrollments = Array.isArray(enrollmentData)
-      ? enrollmentData.map(normalizeEnrollment)
-      : [];
-    const normalizedUsers = Array.isArray(usersData)
-      ? usersData.map((u: any) => normalizeUser(u, normalizedEnrollments))
-      : [];
-    const normalizedCourses = Array.isArray(coursesData)
-      ? coursesData.map((c: any) => normalizeCourse(c, normalizedEnrollments))
-      : [];
+    const normalizedEnrollments =
+      enrollmentsResult.status === 'fulfilled' && Array.isArray(enrollmentsResult.value)
+        ? enrollmentsResult.value.map(normalizeEnrollment)
+        : enrollments;
 
-    setEnrollments(normalizedEnrollments);
-    setUsers(sortByNumericId(normalizedUsers));
-    setCourses(sortByNumericId(normalizedCourses));
-    syncCurrentUser(normalizedUsers);
+    if (usersResult.status === 'fulfilled' && Array.isArray(usersResult.value)) {
+      const normalizedUsers = usersResult.value.map((u: any) =>
+        normalizeUser(u, normalizedEnrollments),
+      );
+      setUsers(sortByNumericId(normalizedUsers));
+      syncCurrentUser(normalizedUsers);
+    }
+
+    if (coursesResult.status === 'fulfilled' && Array.isArray(coursesResult.value)) {
+      const normalizedCourses = coursesResult.value.map((c: any) =>
+        normalizeCourse(c, normalizedEnrollments),
+      );
+      setCourses(sortByNumericId(normalizedCourses));
+    }
+
+    if (enrollmentsResult.status === 'fulfilled' && Array.isArray(enrollmentsResult.value)) {
+      setEnrollments(normalizedEnrollments);
+    }
   };
 
   const refreshAllData = async () => {
@@ -274,11 +283,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         apiClient.enrollments.getAll(),
       ]);
 
-    const resolvedEnrollments =
+    const normalizedEnrollments =
       enrollmentsResult.status === 'fulfilled' && Array.isArray(enrollmentsResult.value)
-        ? enrollmentsResult.value
-        : [];
-    const normalizedEnrollments = resolvedEnrollments.map(normalizeEnrollment);
+        ? enrollmentsResult.value.map(normalizeEnrollment)
+        : enrollments;
 
     if (usersResult.status === 'fulfilled' && Array.isArray(usersResult.value)) {
       const normalizedUsers = sortByNumericId(
@@ -304,7 +312,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       setRecords(sortByNumericId(recordsResult.value.map(normalizeRecord)));
     }
 
-    setEnrollments(normalizedEnrollments);
+    if (enrollmentsResult.status === 'fulfilled' && Array.isArray(enrollmentsResult.value)) {
+      setEnrollments(normalizedEnrollments);
+    }
   };
 
   const fetchUsers = async () => {
@@ -474,9 +484,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       await refreshUsersCoursesEnrollments().catch(() => {});
       bumpDataVersion();
     } catch (err) {
-      // Fallback: keep student flow working when enrollment endpoint is unavailable.
-      applyEnrollmentLocal(studentId, courseId);
-      console.warn('Enrollment API failed; applied local enrollment fallback.', err);
+      const message = err instanceof Error ? err.message : 'Failed to enroll course';
+      setError(message);
+      throw err;
     } finally {
       setIsLoading(false);
     }
