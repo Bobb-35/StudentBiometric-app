@@ -16,6 +16,12 @@ export default function StudentDashboard() {
   const [biometricEnrollment, setBiometricEnrollment] = useState({ fingerprintEnrolled: false, faceEnrolled: false });
   const [enrollingMethod, setEnrollingMethod] = useState<'fingerprint' | 'face' | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [changingPassword, setChangingPassword] = useState(false);
 
   const myEnrolled = currentUser?.enrolledCourses || [];
   const myCourses = courses.filter(c => myEnrolled.includes(c.id));
@@ -54,7 +60,17 @@ export default function StudentDashboard() {
     try {
       setEnrollingMethod(method);
       setActionMessage(null);
-      await authenticateWithDeviceBiometrics(currentUser.id, currentUser.name);
+      const credentialId = await authenticateWithDeviceBiometrics(currentUser.id, currentUser.name);
+
+      if (method === 'fingerprint') {
+        await apiClient.users.update(Number(currentUser.id), {
+          name: currentUser.name,
+          email: currentUser.email,
+          department: currentUser.department || null,
+          avatar: currentUser.avatar || null,
+          fingerprintId: credentialId,
+        });
+      }
 
       const nextEnrollment = {
         fingerprintEnrolled: biometricEnrollment.fingerprintEnrolled || method === 'fingerprint',
@@ -77,6 +93,33 @@ export default function StudentDashboard() {
       setActionMessage(err instanceof Error ? err.message : 'Biometric enrollment failed. Please retry.');
     } finally {
       setEnrollingMethod(null);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (!currentUser) return;
+    if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
+      setActionMessage('Fill in all password fields.');
+      return;
+    }
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setActionMessage('New password and confirmation do not match.');
+      return;
+    }
+
+    try {
+      setChangingPassword(true);
+      await apiClient.auth.changePassword({
+        userId: Number(currentUser.id),
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword,
+      });
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setActionMessage('Password updated successfully.');
+    } catch (err) {
+      setActionMessage(err instanceof Error ? err.message : 'Failed to update password.');
+    } finally {
+      setChangingPassword(false);
     }
   };
 
@@ -539,6 +582,40 @@ export default function StudentDashboard() {
                 </div>
               </div>
               <p className="text-xs text-slate-400 mt-3">Enroll biometrics here before joining or signing course sessions.</p>
+            </div>
+
+            <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
+              <h3 className="font-semibold text-slate-800 mb-4">Password Management</h3>
+              <div className="space-y-3">
+                <input
+                  type="password"
+                  placeholder="Current password"
+                  value={passwordForm.currentPassword}
+                  onChange={e => setPasswordForm(prev => ({ ...prev, currentPassword: e.target.value }))}
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                />
+                <input
+                  type="password"
+                  placeholder="New password"
+                  value={passwordForm.newPassword}
+                  onChange={e => setPasswordForm(prev => ({ ...prev, newPassword: e.target.value }))}
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                />
+                <input
+                  type="password"
+                  placeholder="Confirm new password"
+                  value={passwordForm.confirmPassword}
+                  onChange={e => setPasswordForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                />
+                <button
+                  onClick={handleChangePassword}
+                  disabled={changingPassword}
+                  className="w-full bg-slate-900 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-slate-800 disabled:opacity-60"
+                >
+                  {changingPassword ? 'Updating...' : 'Change Password'}
+                </button>
+              </div>
             </div>
           </div>
         )}

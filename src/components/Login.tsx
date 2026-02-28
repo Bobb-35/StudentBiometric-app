@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { Fingerprint, Eye, EyeOff, Shield, Wifi } from 'lucide-react';
+import { apiClient } from '../services/ApiClient';
 
 export default function Login() {
   const { login } = useApp();
@@ -10,6 +11,22 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [sendingReset, setSendingReset] = useState(false);
+  const [showForgot, setShowForgot] = useState(false);
+  const [resetToken, setResetToken] = useState('');
+  const [resetPassword, setResetPassword] = useState('');
+  const [resetConfirm, setResetConfirm] = useState('');
+  const [resetting, setResetting] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token') || '';
+    if (token) {
+      setResetToken(token);
+      setShowForgot(false);
+    }
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,6 +44,48 @@ export default function Login() {
     await new Promise(r => setTimeout(r, 2500));
     setScanning(false);
     setError('Biometric device not detected. Use credentials instead.');
+  };
+
+  const handleForgotPassword = async () => {
+    if (!forgotEmail.trim()) {
+      setError('Enter your email to receive reset link.');
+      return;
+    }
+    try {
+      setSendingReset(true);
+      setError('');
+      await apiClient.auth.forgotPassword(forgotEmail.trim());
+      setError('If the email exists, a reset link has been sent.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to send reset link.');
+    } finally {
+      setSendingReset(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!resetPassword || !resetConfirm) {
+      setError('Enter and confirm a new password.');
+      return;
+    }
+    if (resetPassword !== resetConfirm) {
+      setError('Passwords do not match.');
+      return;
+    }
+    try {
+      setResetting(true);
+      setError('');
+      await apiClient.auth.resetPassword(resetToken, resetPassword);
+      setError('Password reset successful. You can now sign in.');
+      setResetPassword('');
+      setResetConfirm('');
+      window.history.replaceState({}, '', window.location.pathname);
+      setResetToken('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Password reset failed.');
+    } finally {
+      setResetting(false);
+    }
   };
 
   return (
@@ -64,6 +123,37 @@ export default function Login() {
             </div>
           )}
 
+          {resetToken ? (
+            <div className="space-y-4">
+              <div>
+                <label className="text-blue-200 text-sm font-medium block mb-1">New Password</label>
+                <input
+                  type="password"
+                  value={resetPassword}
+                  onChange={e => setResetPassword(e.target.value)}
+                  className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-blue-300/60 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  placeholder="Enter new password"
+                />
+              </div>
+              <div>
+                <label className="text-blue-200 text-sm font-medium block mb-1">Confirm Password</label>
+                <input
+                  type="password"
+                  value={resetConfirm}
+                  onChange={e => setResetConfirm(e.target.value)}
+                  className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-blue-300/60 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  placeholder="Confirm new password"
+                />
+              </div>
+              <button
+                onClick={handleResetPassword}
+                disabled={resetting}
+                className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold py-3 rounded-xl disabled:opacity-60"
+              >
+                {resetting ? 'Resetting...' : 'Reset Password'}
+              </button>
+            </div>
+          ) : (
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <label className="text-blue-200 text-sm font-medium block mb-1">Email Address</label>
@@ -103,8 +193,40 @@ export default function Login() {
               ) : 'Sign In'}
             </button>
           </form>
+          )}
+
+          {!resetToken && (
+            <div className="mt-3">
+              <button
+                onClick={() => setShowForgot(v => !v)}
+                className="text-blue-300 text-xs hover:text-white transition"
+              >
+                Forgot password?
+              </button>
+            </div>
+          )}
+
+          {!resetToken && showForgot && (
+            <div className="mt-3 space-y-2">
+              <input
+                type="email"
+                value={forgotEmail}
+                onChange={e => setForgotEmail(e.target.value)}
+                placeholder="Enter your account email"
+                className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2 text-white placeholder-blue-300/60 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              />
+              <button
+                onClick={handleForgotPassword}
+                disabled={sendingReset}
+                className="w-full bg-white/10 hover:bg-white/20 border border-white/20 text-white text-sm py-2 rounded-xl disabled:opacity-60"
+              >
+                {sendingReset ? 'Sending...' : 'Send Reset Link'}
+              </button>
+            </div>
+          )}
 
           {/* Biometric Button */}
+          {!resetToken && (
           <div className="relative my-5">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-white/20" />
@@ -113,8 +235,9 @@ export default function Login() {
               <span className="bg-transparent text-blue-300 text-xs px-3">or continue with biometric</span>
             </div>
           </div>
+          )}
 
-          <button onClick={handleBiometricLogin} disabled={scanning}
+          {!resetToken && <button onClick={handleBiometricLogin} disabled={scanning}
             className="w-full bg-white/10 hover:bg-white/20 border border-white/20 text-white font-medium py-3 rounded-xl transition flex items-center justify-center gap-3 group">
             {scanning ? (
               <>
@@ -127,7 +250,7 @@ export default function Login() {
                 <span>Fingerprint / Face ID</span>
               </>
             )}
-          </button>
+          </button>}
 
         </div>
 

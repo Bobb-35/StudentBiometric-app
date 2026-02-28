@@ -61,7 +61,7 @@ const createCredentialIfMissing = async (userId: string, userName: string): Prom
   return credentialId;
 };
 
-export const authenticateWithDeviceBiometrics = async (userId: string, userName: string) => {
+export const authenticateWithDeviceBiometrics = async (userId: string, userName: string): Promise<string> => {
   if (!window.isSecureContext) {
     throw new Error('Biometric sign-in requires HTTPS or localhost');
   }
@@ -82,4 +82,6 @@ export const authenticateWithDeviceBiometrics = async (userId: string, userName:
   if (!assertion || assertion.type !== 'public-key') {
     throw new Error('Biometric verification failed');
   }
+
+  return credentialId;
 };

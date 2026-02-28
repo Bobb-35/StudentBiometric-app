@@ -9,10 +9,12 @@ CREATE TABLE IF NOT EXISTS users (
     password VARCHAR(255) NOT NULL,
     name VARCHAR(255) NOT NULL,
     role ENUM('ADMIN', 'LECTURER', 'STUDENT') NOT NULL,
-    student_id VARCHAR(50),
-    staff_id VARCHAR(50),
+    student_id VARCHAR(50) UNIQUE,
+    staff_id VARCHAR(50) UNIQUE,
+    student_sequence BIGINT,
+    staff_sequence BIGINT,
     department VARCHAR(100),
-    fingerprint_id VARCHAR(255),
+    fingerprint_id VARCHAR(255) UNIQUE,
     face_id VARCHAR(255),
     avatar VARCHAR(500),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -63,6 +65,8 @@ CREATE TABLE IF NOT EXISTS attendance_sessions (
     date VARCHAR(20) NOT NULL,
     start_time VARCHAR(10) NOT NULL,
     end_time VARCHAR(10),
+    started_at TIMESTAMP,
+    ended_at TIMESTAMP,
     status ENUM('ACTIVE', 'CLOSED') NOT NULL DEFAULT 'ACTIVE',
     biometric_enabled BOOLEAN NOT NULL DEFAULT TRUE,
     attendance_type ENUM('FINGERPRINT', 'FACE', 'BOTH') NOT NULL DEFAULT 'BOTH',
@@ -74,6 +78,19 @@ CREATE TABLE IF NOT EXISTS attendance_sessions (
     INDEX idx_lecturer_id (lecturer_id),
     INDEX idx_date (date),
     INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Password Reset Tokens Table
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT NOT NULL,
+    token VARCHAR(120) NOT NULL UNIQUE,
+    expires_at TIMESTAMP NOT NULL,
+    used_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_password_reset_user_id (user_id),
+    INDEX idx_password_reset_expires_at (expires_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Attendance Records Table

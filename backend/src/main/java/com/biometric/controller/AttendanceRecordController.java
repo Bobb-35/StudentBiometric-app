@@ -50,8 +50,12 @@ public class AttendanceRecordController {
 
     @PostMapping
     public ResponseEntity<AttendanceRecord> createRecord(@RequestBody AttendanceRecord record) {
-        AttendanceRecord createdRecord = recordService.createRecord(record);
-        return ResponseEntity.ok(createdRecord);
+        try {
+            AttendanceRecord createdRecord = recordService.createRecord(record);
+            return ResponseEntity.ok(createdRecord);
+        } catch (RuntimeException ex) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 
     @PutMapping("/{id}")

@@ -6,6 +6,11 @@ import java.time.LocalDateTime;
 @Entity
 @Table(
     name = "users",
+    uniqueConstraints = {
+        @UniqueConstraint(name = "uk_user_student_id", columnNames = "student_id"),
+        @UniqueConstraint(name = "uk_user_staff_id", columnNames = "staff_id"),
+        @UniqueConstraint(name = "uk_user_fingerprint_id", columnNames = "fingerprint_id")
+    },
     indexes = {
         @Index(name = "idx_user_email", columnList = "email"),
         @Index(name = "idx_user_role", columnList = "role"),
@@ -36,6 +41,12 @@ public class User {
 
     @Column(name = "staff_id")
     private String staffId;
+
+    @Column(name = "student_sequence")
+    private Long studentSequence;
+
+    @Column(name = "staff_sequence")
+    private Long staffSequence;
 
     private String department;
 
@@ -126,6 +137,22 @@ public class User {
 
     public void setDepartment(String department) {
         this.department = department;
+    }
+
+    public Long getStudentSequence() {
+        return studentSequence;
+    }
+
+    public void setStudentSequence(Long studentSequence) {
+        this.studentSequence = studentSequence;
+    }
+
+    public Long getStaffSequence() {
+        return staffSequence;
+    }
+
+    public void setStaffSequence(Long staffSequence) {
+        this.staffSequence = staffSequence;
     }
 
     public String getFingerprintId() {

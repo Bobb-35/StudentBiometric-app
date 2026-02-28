@@ -53,13 +53,21 @@ public class AttendanceSessionController {
 
     @PostMapping
     public ResponseEntity<AttendanceSession> createSession(@RequestBody AttendanceSession session) {
-        AttendanceSession createdSession = sessionService.createSession(session);
-        return ResponseEntity.ok(createdSession);
+        try {
+            AttendanceSession createdSession = sessionService.createSession(session);
+            return ResponseEntity.ok(createdSession);
+        } catch (RuntimeException ex) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<AttendanceSession> updateSession(@PathVariable Long id, @RequestBody AttendanceSession sessionDetails) {
-        return ResponseEntity.ok(sessionService.updateSession(id, sessionDetails));
+        try {
+            return ResponseEntity.ok(sessionService.updateSession(id, sessionDetails));
+        } catch (RuntimeException ex) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 
     @DeleteMapping("/{id}")

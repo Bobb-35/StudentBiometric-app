@@ -71,6 +71,11 @@ class ApiClient {
     getUser: (id: number) => this.request(`/auth/user/${id}`),
     getUserByEmail: (email: string) => this.request(`/auth/user/email/${email}`),
     updateUser: (id: number, data: any) => this.request(`/auth/user/${id}`, 'PUT', data),
+    changePassword: (data: { userId: number; currentPassword: string; newPassword: string }) =>
+      this.request('/auth/change-password', 'POST', data),
+    forgotPassword: (email: string) => this.request('/auth/forgot-password', 'POST', { email }),
+    resetPassword: (token: string, newPassword: string) =>
+      this.request('/auth/reset-password', 'POST', { token, newPassword }),
   };
 
   // User Endpoints
@@ -78,6 +83,8 @@ class ApiClient {
     getAll: () => this.request('/users'),
     getById: (id: number) => this.request(`/users/${id}`),
     getByRole: (role: string) => this.request(`/users/role/${role}`),
+    getByStudentId: (studentId: string) =>
+      this.request(`/users/student-id/${encodeURIComponent(studentId)}`),
     create: (user: any) => this.request('/users', 'POST', user),
     update: (id: number, data: any) => this.request(`/users/${id}`, 'PUT', data),
     delete: (id: number) => this.request(`/users/${id}`, 'DELETE'),

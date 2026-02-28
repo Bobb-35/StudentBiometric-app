@@ -1,11 +1,11 @@
 package com.biometric.controller;
 
 import com.biometric.model.User;
+import com.biometric.service.PasswordResetService;
 import com.biometric.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import java.util.List;
 
 @RestController
 @RequestMapping("/auth")
@@ -13,11 +13,17 @@ import java.util.List;
 public class AuthController {
     @Autowired
     private UserService userService;
+    @Autowired
+    private PasswordResetService passwordResetService;
 
     @PostMapping("/register")
     public ResponseEntity<User> register(@RequestBody User user) {
-        User createdUser = userService.createUser(user);
-        return ResponseEntity.ok(createdUser);
+        try {
+            User createdUser = userService.createUser(user);
+            return ResponseEntity.ok(createdUser);
+        } catch (RuntimeException ex) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 
     @PostMapping("/login")
@@ -51,7 +57,37 @@ public class AuthController {
 
     @PutMapping("/user/{id}")
     public ResponseEntity<User> updateUser(@PathVariable Long id, @RequestBody User userDetails) {
-        return ResponseEntity.ok(userService.updateUser(id, userDetails));
+        try {
+            return ResponseEntity.ok(userService.updateUser(id, userDetails));
+        } catch (RuntimeException ex) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<?> changePassword(@RequestBody ChangePasswordRequest request) {
+        try {
+            userService.changePassword(request.getUserId(), request.getCurrentPassword(), request.getNewPassword());
+            return ResponseEntity.ok(new MessageResponse("Password changed successfully"));
+        } catch (RuntimeException ex) {
+            return ResponseEntity.badRequest().body(new ErrorResponse(ex.getMessage()));
+        }
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest request) {
+        passwordResetService.sendResetLink(request.getEmail());
+        return ResponseEntity.ok(new MessageResponse("If the email exists, a reset link has been sent."));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
+        try {
+            passwordResetService.resetPassword(request.getToken(), request.getNewPassword());
+            return ResponseEntity.ok(new MessageResponse("Password reset successful"));
+        } catch (RuntimeException ex) {
+            return ResponseEntity.badRequest().body(new ErrorResponse(ex.getMessage()));
+        }
     }
 
     public static class LoginRequest {
@@ -63,6 +99,50 @@ public class AuthController {
 
         public String getPassword() { return password; }
         public void setPassword(String password) { this.password = password; }
+    }
+
+    public static class ChangePasswordRequest {
+        public Long userId;
+        public String currentPassword;
+        public String newPassword;
+
+        public Long getUserId() { return userId; }
+        public void setUserId(Long userId) { this.userId = userId; }
+
+        public String getCurrentPassword() { return currentPassword; }
+        public void setCurrentPassword(String currentPassword) { this.currentPassword = currentPassword; }
+
+        public String getNewPassword() { return newPassword; }
+        public void setNewPassword(String newPassword) { this.newPassword = newPassword; }
+    }
+
+    public static class ForgotPasswordRequest {
+        public String email;
+
+        public String getEmail() { return email; }
+        public void setEmail(String email) { this.email = email; }
+    }
+
+    public static class ResetPasswordRequest {
+        public String token;
+        public String newPassword;
+
+        public String getToken() { return token; }
+        public void setToken(String token) { this.token = token; }
+
+        public String getNewPassword() { return newPassword; }
+        public void setNewPassword(String newPassword) { this.newPassword = newPassword; }
+    }
+
+    public static class MessageResponse {
+        public String message;
+
+        public MessageResponse(String message) {
+            this.message = message;
+        }
+
+        public String getMessage() { return message; }
+        public void setMessage(String message) { this.message = message; }
     }
 
     public static class LoginResponse {

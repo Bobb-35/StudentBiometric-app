@@ -32,6 +32,12 @@ public class AttendanceSession {
 
     private String endTime;
 
+    @Column(name = "started_at")
+    private LocalDateTime startedAt;
+
+    @Column(name = "ended_at")
+    private LocalDateTime endedAt;
+
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private SessionStatus status;
@@ -78,6 +84,12 @@ public class AttendanceSession {
 
     public String getEndTime() { return endTime; }
     public void setEndTime(String endTime) { this.endTime = endTime; }
+
+    public LocalDateTime getStartedAt() { return startedAt; }
+    public void setStartedAt(LocalDateTime startedAt) { this.startedAt = startedAt; }
+
+    public LocalDateTime getEndedAt() { return endedAt; }
+    public void setEndedAt(LocalDateTime endedAt) { this.endedAt = endedAt; }
 
     public SessionStatus getStatus() { return status; }
     public void setStatus(SessionStatus status) { this.status = status; }

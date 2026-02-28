@@ -22,14 +22,22 @@ public class BiometricEnrollmentController {
 
     @PostMapping("/enroll")
     public ResponseEntity<BiometricEnrollment> enrollBiometric(@RequestBody BiometricEnrollment enrollment) {
-        BiometricEnrollment created = enrollmentService.enrollBiometric(enrollment);
-        return ResponseEntity.ok(created);
+        try {
+            BiometricEnrollment created = enrollmentService.enrollBiometric(enrollment);
+            return ResponseEntity.ok(created);
+        } catch (RuntimeException ex) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 
     @PutMapping("/user/{userId}")
     public ResponseEntity<BiometricEnrollment> updateEnrollment(
             @PathVariable Long userId,
             @RequestBody BiometricEnrollment enrollmentDetails) {
-        return ResponseEntity.ok(enrollmentService.updateEnrollment(userId, enrollmentDetails));
+        try {
+            return ResponseEntity.ok(enrollmentService.updateEnrollment(userId, enrollmentDetails));
+        } catch (RuntimeException ex) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 }

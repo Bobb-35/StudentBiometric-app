@@ -12,6 +12,7 @@ export default function AdminDashboard() {
   const [showAddUser, setShowAddUser] = useState(false);
   const [showAddCourse, setShowAddCourse] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [studentIdSearch, setStudentIdSearch] = useState('');
   const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'student', department: '', studentId: '', staffId: '' });
   const [newCourse, setNewCourse] = useState({ code: '', name: '', lecturerId: '', department: '', schedule: '', room: '', credits: '3' });
 
@@ -109,13 +110,6 @@ export default function AdminDashboard() {
         department: newUser.department,
       };
       
-      if (newUser.role === 'student' && newUser.studentId) {
-        user.studentId = newUser.studentId;
-      }
-      if (newUser.role !== 'student' && newUser.staffId) {
-        user.staffId = newUser.staffId;
-      }
-
       await addUser(user as User);
       setSuccessMessage(`✓ ${newUser.name} added successfully!`);
       setNewUser({ name: '', email: '', password: '', role: 'student', department: '', studentId: '', staffId: '' });
@@ -187,6 +181,12 @@ export default function AdminDashboard() {
     { id: 'courses', label: 'Courses' },
     { id: 'reports', label: 'Reports' },
   ];
+
+  const filteredUsers = users.filter(user => {
+    if (!studentIdSearch.trim()) return true;
+    if (user.role !== 'student') return false;
+    return (user.studentId || '').toLowerCase().includes(studentIdSearch.trim().toLowerCase());
+  });
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 sm:p-6">
@@ -351,9 +351,17 @@ export default function AdminDashboard() {
           <div className="space-y-5">
             <div className="flex justify-between items-center">
               <h2 className="text-lg font-bold text-slate-900">User Management</h2>
-              <button onClick={() => setShowAddUser(true)} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-700 transition">
-                <Plus className="w-4 h-4" /> Add User
-              </button>
+              <div className="flex gap-2">
+                <input
+                  value={studentIdSearch}
+                  onChange={e => setStudentIdSearch(e.target.value)}
+                  placeholder="Search student by ID"
+                  className="border border-slate-300 rounded-xl px-3 py-2 text-sm w-52"
+                />
+                <button onClick={() => setShowAddUser(true)} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-700 transition">
+                  <Plus className="w-4 h-4" /> Add User
+                </button>
+              </div>
             </div>
 
             {showAddUser && (
@@ -433,23 +441,17 @@ export default function AdminDashboard() {
                   </div>
                   {newUser.role === 'student' ? (
                     <div className="sm:col-span-2">
-                      <label className="text-xs font-semibold text-slate-600 block mb-2">Student ID (Optional)</label>
-                      <input
-                        placeholder="STD-2024-001"
-                        value={newUser.studentId}
-                        onChange={e => setNewUser({ ...newUser, studentId: e.target.value })}
-                        className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
-                      />
+                      <label className="text-xs font-semibold text-slate-600 block mb-2">Student ID</label>
+                      <div className="w-full border border-slate-200 bg-slate-50 rounded-lg px-3 py-2 text-sm text-slate-500">
+                        Auto-generated (STU-xxxxx)
+                      </div>
                     </div>
                   ) : newUser.role === 'lecturer' ? (
                     <div className="sm:col-span-2">
-                      <label className="text-xs font-semibold text-slate-600 block mb-2">Staff ID (Optional)</label>
-                      <input
-                        placeholder="LEC-003"
-                        value={newUser.staffId}
-                        onChange={e => setNewUser({ ...newUser, staffId: e.target.value })}
-                        className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
-                      />
+                      <label className="text-xs font-semibold text-slate-600 block mb-2">Lecturer ID</label>
+                      <div className="w-full border border-slate-200 bg-slate-50 rounded-lg px-3 py-2 text-sm text-slate-500">
+                        Auto-generated (LEC-xxxxx)
+                      </div>
                     </div>
                   ) : null}
                 </div>
@@ -494,7 +496,7 @@ export default function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
-                    {users.map(user => (
+                    {filteredUsers.map(user => (
                       <tr key={user.id} className="hover:bg-slate-50 transition">
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">

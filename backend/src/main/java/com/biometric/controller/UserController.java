@@ -51,15 +51,30 @@ public class UserController {
         }
     }
 
+    @GetMapping("/student-id/{studentId}")
+    public ResponseEntity<User> getStudentByStudentId(@PathVariable String studentId) {
+        return userService.getStudentByStudentId(studentId)
+            .map(ResponseEntity::ok)
+            .orElse(ResponseEntity.notFound().build());
+    }
+
     @PostMapping
     public ResponseEntity<User> createUser(@RequestBody User user) {
-        User createdUser = userService.createUser(user);
-        return ResponseEntity.ok(createdUser);
+        try {
+            User createdUser = userService.createUser(user);
+            return ResponseEntity.ok(createdUser);
+        } catch (RuntimeException ex) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<User> updateUser(@PathVariable Long id, @RequestBody User userDetails) {
-        return ResponseEntity.ok(userService.updateUser(id, userDetails));
+        try {
+            return ResponseEntity.ok(userService.updateUser(id, userDetails));
+        } catch (RuntimeException ex) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 
     @DeleteMapping("/{id}")
