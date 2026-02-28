@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { BookOpen, Play, Square, Users, Fingerprint, Camera, ClipboardCheck, Clock, CheckCircle, XCircle, AlertCircle, Download } from 'lucide-react';
 import { AttendanceSession, AttendanceRecord } from '../../types';
@@ -15,7 +15,26 @@ export default function LecturerDashboard() {
 
   const myCourses = courses.filter(c => c.lecturerId === currentUser?.id);
   const today = new Date().toISOString().split('T')[0];
-  const activeSession = sessions.find(s => s.id === activeSessionId && s.status === 'active');
+  const myCourseIds = myCourses.map(c => c.id);
+  const mySessions = sessions.filter(s => myCourseIds.includes(s.courseId) && s.lecturerId === currentUser?.id);
+  const myActiveSessions = mySessions.filter(s => s.status === 'active');
+
+  useEffect(() => {
+    if (activeSessionId && myActiveSessions.some(s => s.id === activeSessionId)) return;
+    if (myActiveSessions.length > 0) {
+      setActiveSessionId(myActiveSessions[0].id);
+      if (!selectedCourse) {
+        setSelectedCourse(myActiveSessions[0].courseId);
+      }
+      return;
+    }
+    setActiveSessionId(null);
+  }, [activeSessionId, myActiveSessions, selectedCourse]);
+
+  const activeSession =
+    (activeSessionId ? myActiveSessions.find(s => s.id === activeSessionId) : null) ||
+    myActiveSessions[0] ||
+    null;
 
   const startSession = async () => {
     if (!selectedCourse) return;
@@ -38,11 +57,12 @@ export default function LecturerDashboard() {
   };
 
   const endSession = async () => {
-    if (activeSessionId) {
-      await closeSession(activeSessionId);
+    const sessionToClose = activeSession?.id || activeSessionId;
+    if (sessionToClose) {
+      await closeSession(sessionToClose);
       setActiveSessionId(null);
       setActiveView('records');
-      setSelectedSessionForRecords(activeSessionId);
+      setSelectedSessionForRecords(sessionToClose);
     }
   };
 
@@ -89,9 +109,6 @@ export default function LecturerDashboard() {
 
   const getSessionRecords = (sessionId: string) => records.filter(r => r.sessionId === sessionId);
   const getStudentName = (id: string) => users.find(u => u.id === id)?.name || 'Unknown';
-
-  const myCourseIds = myCourses.map(c => c.id);
-  const mySessions = sessions.filter(s => myCourseIds.includes(s.courseId) && s.lecturerId === currentUser?.id);
 
   const csvEscape = (value: string | number | undefined) => {
     if (value == null) return '';
@@ -243,7 +260,11 @@ export default function LecturerDashboard() {
                     <button
                       onClick={() => { setSelectedCourse(course.id); setActiveView('session'); }}
                       className="w-full bg-blue-600 text-white py-2 rounded-xl text-sm font-medium hover:bg-blue-700 transition flex items-center justify-center gap-2">
-                      <Play className="w-4 h-4" /> Start Attendance Session
+                      {myActiveSessions.some(s => s.courseId === course.id) ? (
+                        <><Clock className="w-4 h-4" /> Resume Active Session</>
+                      ) : (
+                        <><Play className="w-4 h-4" /> Start Attendance Session</>
+                      )}
                     </button>
                   </div>
                 );
@@ -258,6 +279,11 @@ export default function LecturerDashboard() {
             {!activeSession ? (
               <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
                 <h2 className="text-lg font-bold text-slate-900 mb-5">Start Attendance Session</h2>
+                {myActiveSessions.length > 0 && (
+                  <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-700">
+                    You have {myActiveSessions.length} active session(s). Select "Resume Active Session" from My Courses to continue and end it.
+                  </div>
+                )}
                 <div className="space-y-4">
                   <div>
                     <label className="text-sm font-medium text-slate-700 block mb-2">Select Course</label>
