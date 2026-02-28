@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { Fingerprint, LogOut, Bell, Menu, X, User, Shield, BookOpen } from 'lucide-react';
 
@@ -9,8 +9,9 @@ interface NavbarProps {
 }
 
 export default function Navbar({ activeTab, setActiveTab, tabs }: NavbarProps) {
-  const { currentUser, logout } = useApp();
+  const { currentUser, logout, courses, sessions, records, users } = useApp();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const roleColors: Record<string, string> = {
     admin: 'from-purple-500 to-violet-600',
@@ -22,6 +23,107 @@ export default function Navbar({ activeTab, setActiveTab, tabs }: NavbarProps) {
     lecturer: <BookOpen className="w-4 h-4" />,
     student: <User className="w-4 h-4" />,
   };
+
+  const today = new Date().toISOString().split('T')[0];
+
+  const notifications = useMemo(() => {
+    if (!currentUser) return [] as string[];
+
+    if (currentUser.role === 'admin') {
+      const liveSessions = sessions.filter(s => s.status === 'active');
+      const students = users.filter(u => u.role === 'student');
+      const studentsWithoutFingerprint = students.filter(s => !s.fingerprintId);
+      const closedToday = sessions.filter(s => s.status === 'closed' && s.date === today);
+
+      const items: string[] = [];
+      if (liveSessions.length > 0) {
+        items.push(`${liveSessions.length} live session(s) currently running.`);
+      }
+      if (studentsWithoutFingerprint.length > 0) {
+        items.push(
+          `${studentsWithoutFingerprint.length} student(s) have not enrolled fingerprints.`,
+        );
+      }
+      if (closedToday.length > 0) {
+        items.push(`${closedToday.length} session(s) have been closed today.`);
+      }
+      if (items.length === 0) {
+        items.push('No urgent admin notifications right now.');
+      }
+      return items;
+    }
+
+    if (currentUser.role === 'lecturer') {
+      const myCourses = courses.filter(c => c.lecturerId === currentUser.id);
+      const myCourseIds = new Set(myCourses.map(c => c.id));
+      const mySessions = sessions.filter(s => myCourseIds.has(s.courseId));
+      const myLive = mySessions.filter(s => s.status === 'active');
+      const todaySessions = mySessions.filter(s => s.date === today);
+
+      const unsignedCount = myLive.reduce((sum, session) => {
+        const course = courses.find(c => c.id === session.courseId);
+        const enrolled = course?.enrolledStudents || [];
+        const signed = new Set(
+          records.filter(r => r.sessionId === session.id).map(r => r.studentId),
+        );
+        return sum + enrolled.filter(id => !signed.has(id)).length;
+      }, 0);
+
+      const items: string[] = [];
+      if (myLive.length > 0) {
+        items.push(`${myLive.length} live session(s) need monitoring or ending.`);
+      }
+      if (unsignedCount > 0) {
+        items.push(`${unsignedCount} student(s) still not signed in for live sessions.`);
+      }
+      if (todaySessions.length === 0 && myCourses.length > 0) {
+        items.push('No session started today for your courses yet.');
+      }
+      if (items.length === 0) {
+        items.push('No urgent lecturer notifications right now.');
+      }
+      return items;
+    }
+
+    const myEnrolled = new Set(currentUser.enrolledCourses || []);
+    const myActiveSessions = sessions.filter(
+      s => s.status === 'active' && myEnrolled.has(s.courseId),
+    );
+    const mySignedSessionIds = new Set(records.filter(r => r.studentId === currentUser.id).map(r => r.sessionId));
+    const pendingSignIns = myActiveSessions.filter(s => !mySignedSessionIds.has(s.id)).length;
+
+    const closedForMe = sessions.filter(
+      s => s.status === 'closed' && myEnrolled.has(s.courseId),
+    );
+    const myPresent = records.filter(
+      r =>
+        r.studentId === currentUser.id &&
+        (r.status === 'present' || r.status === 'late') &&
+        closedForMe.some(s => s.id === r.sessionId),
+    ).length;
+    const attendancePct = closedForMe.length > 0 ? Math.round((myPresent / closedForMe.length) * 100) : 100;
+
+    const items: string[] = [];
+    if (!currentUser.fingerprintId) {
+      items.push('Enroll your fingerprint to avoid sign-in restrictions.');
+    }
+    if (pendingSignIns > 0) {
+      items.push(`${pendingSignIns} active session(s) waiting for your sign-in.`);
+    }
+    if (attendancePct < 70) {
+      items.push(`Attendance is ${attendancePct}%. Improve to stay above 70%.`);
+    }
+    if (items.length === 0) {
+      items.push('No urgent student notifications right now.');
+    }
+    return items;
+  }, [courses, currentUser, records, sessions, today, users]);
+
+  const unreadCount =
+    notifications.length === 1 &&
+    notifications[0].toLowerCase().includes('no urgent')
+      ? 0
+      : notifications.length;
 
   return (
     <>
@@ -56,11 +158,43 @@ export default function Navbar({ activeTab, setActiveTab, tabs }: NavbarProps) {
             </div>
 
             {/* User Info */}
-            <div className="flex items-center gap-3">
-              <button className="relative p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition">
+            <div className="flex items-center gap-3 relative">
+              <button
+                onClick={() => setShowNotifications(v => !v)}
+                className="relative p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition"
+              >
                 <Bell className="w-5 h-5" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-blue-500 rounded-full"></span>
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 bg-blue-500 text-white text-[10px] rounded-full flex items-center justify-center">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
               </button>
+              {showNotifications && (
+                <div className="absolute right-0 top-12 w-80 max-h-96 overflow-y-auto bg-slate-800 border border-slate-700 rounded-xl shadow-xl p-3 z-50">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-white text-sm font-semibold capitalize">
+                      {currentUser?.role} Notifications
+                    </p>
+                    <button
+                      onClick={() => setShowNotifications(false)}
+                      className="text-slate-400 hover:text-white text-xs"
+                    >
+                      Close
+                    </button>
+                  </div>
+                  <div className="space-y-2">
+                    {notifications.map((item, idx) => (
+                      <div
+                        key={`${item}-${idx}`}
+                        className="bg-slate-900 border border-slate-700 rounded-lg p-3 text-xs text-slate-200"
+                      >
+                        {item}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="hidden sm:flex items-center gap-2">
                 <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${roleColors[currentUser?.role || 'student']} flex items-center justify-center text-white`}>
                   {roleIcons[currentUser?.role || 'student']}
