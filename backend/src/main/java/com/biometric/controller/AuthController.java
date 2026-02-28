@@ -76,8 +76,12 @@ public class AuthController {
 
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest request) {
-        passwordResetService.sendResetLink(request.getEmail());
-        return ResponseEntity.ok(new MessageResponse("If the email exists, a reset link has been sent."));
+        PasswordResetService.ForgotPasswordResult result = passwordResetService.sendResetLink(request.getEmail());
+        String message = "If the email exists, a reset link has been sent.";
+        if (result.isAccountFound() && !result.isDelivered()) {
+            message = "Email service is not configured. Use the fallback reset link.";
+        }
+        return ResponseEntity.ok(new ForgotPasswordResponse(message, result.getFallbackResetUrl()));
     }
 
     @PostMapping("/reset-password")
@@ -143,6 +147,22 @@ public class AuthController {
 
         public String getMessage() { return message; }
         public void setMessage(String message) { this.message = message; }
+    }
+
+    public static class ForgotPasswordResponse {
+        public String message;
+        public String resetUrl;
+
+        public ForgotPasswordResponse(String message, String resetUrl) {
+            this.message = message;
+            this.resetUrl = resetUrl;
+        }
+
+        public String getMessage() { return message; }
+        public void setMessage(String message) { this.message = message; }
+
+        public String getResetUrl() { return resetUrl; }
+        public void setResetUrl(String resetUrl) { this.resetUrl = resetUrl; }
     }
 
     public static class LoginResponse {

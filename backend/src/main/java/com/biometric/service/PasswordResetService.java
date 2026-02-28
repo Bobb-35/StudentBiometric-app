@@ -10,6 +10,8 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -17,6 +19,8 @@ import java.util.UUID;
 
 @Service
 public class PasswordResetService {
+    private static final Logger log = LoggerFactory.getLogger(PasswordResetService.class);
+
     @Autowired
     private PasswordResetTokenRepository tokenRepository;
     @Autowired
@@ -35,11 +39,14 @@ public class PasswordResetService {
     @Value("${spring.mail.username:no-reply@biometric.local}")
     private String fromEmail;
 
+    @Value("${spring.mail.host:}")
+    private String mailHost;
+
     @Transactional
-    public void sendResetLink(String email) {
+    public ForgotPasswordResult sendResetLink(String email) {
         Optional<User> userOpt = userRepository.findByEmail(email);
         if (userOpt.isEmpty()) {
-            return;
+            return new ForgotPasswordResult(false, null, false);
         }
 
         User user = userOpt.get();
@@ -53,7 +60,8 @@ public class PasswordResetService {
         PasswordResetToken saved = tokenRepository.save(token);
 
         String resetUrl = frontendUrl + "/reset-password?token=" + saved.getToken();
-        sendMail(user.getEmail(), resetUrl);
+        boolean delivered = sendMail(user.getEmail(), resetUrl);
+        return new ForgotPasswordResult(delivered, delivered ? null : resetUrl, true);
     }
 
     @Transactional
@@ -70,21 +78,55 @@ public class PasswordResetService {
         tokenRepository.save(token);
     }
 
-    private void sendMail(String to, String resetUrl) {
-        if (mailSender == null) {
-            System.out.println("Password reset link for " + to + ": " + resetUrl);
-            return;
+    private boolean sendMail(String to, String resetUrl) {
+        if (mailSender == null || isBlank(mailHost)) {
+            log.info("SMTP not configured. Password reset link for {}: {}", to, resetUrl);
+            return false;
         }
 
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom(fromEmail);
-        message.setTo(to);
-        message.setSubject("Biometric Attendance Password Reset");
-        message.setText(
-            "You requested a password reset.\n\n" +
-            "Click the link below to reset your password:\n" + resetUrl + "\n\n" +
-            "This link expires in " + expiryMinutes + " minutes."
-        );
-        mailSender.send(message);
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(fromEmail);
+            message.setTo(to);
+            message.setSubject("Biometric Attendance Password Reset");
+            message.setText(
+                "You requested a password reset.\n\n" +
+                "Click the link below to reset your password:\n" + resetUrl + "\n\n" +
+                "This link expires in " + expiryMinutes + " minutes."
+            );
+            mailSender.send(message);
+            return true;
+        } catch (Exception ex) {
+            log.error("Failed to send password reset email to {}. Reset link: {}", to, resetUrl, ex);
+            return false;
+        }
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
+    }
+
+    public static class ForgotPasswordResult {
+        private final boolean delivered;
+        private final String fallbackResetUrl;
+        private final boolean accountFound;
+
+        public ForgotPasswordResult(boolean delivered, String fallbackResetUrl, boolean accountFound) {
+            this.delivered = delivered;
+            this.fallbackResetUrl = fallbackResetUrl;
+            this.accountFound = accountFound;
+        }
+
+        public boolean isDelivered() {
+            return delivered;
+        }
+
+        public String getFallbackResetUrl() {
+            return fallbackResetUrl;
+        }
+
+        public boolean isAccountFound() {
+            return accountFound;
+        }
     }
 }

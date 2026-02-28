@@ -14,6 +14,7 @@ export default function Login() {
   const [forgotEmail, setForgotEmail] = useState('');
   const [sendingReset, setSendingReset] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
+  const [fallbackResetUrl, setFallbackResetUrl] = useState('');
   const [resetToken, setResetToken] = useState('');
   const [resetPassword, setResetPassword] = useState('');
   const [resetConfirm, setResetConfirm] = useState('');
@@ -54,10 +55,12 @@ export default function Login() {
     try {
       setSendingReset(true);
       setError('');
-      await apiClient.auth.forgotPassword(forgotEmail.trim());
-      setError('If the email exists, a reset link has been sent.');
+      const response: any = await apiClient.auth.forgotPassword(forgotEmail.trim());
+      setError(response?.message || 'If the email exists, a reset link has been sent.');
+      setFallbackResetUrl(response?.resetUrl || '');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send reset link.');
+      setFallbackResetUrl('');
     } finally {
       setSendingReset(false);
     }
@@ -222,6 +225,14 @@ export default function Login() {
               >
                 {sendingReset ? 'Sending...' : 'Send Reset Link'}
               </button>
+              {fallbackResetUrl && (
+                <a
+                  href={fallbackResetUrl}
+                  className="block text-xs text-blue-200 underline break-all"
+                >
+                  Open fallback reset link
+                </a>
+              )}
             </div>
           )}
 
