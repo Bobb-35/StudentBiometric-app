@@ -15,6 +15,8 @@ export default function Login() {
   const [sendingReset, setSendingReset] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
   const [fallbackResetUrl, setFallbackResetUrl] = useState('');
+  const [forgotMessage, setForgotMessage] = useState('');
+  const [forgotDelivered, setForgotDelivered] = useState(false);
   const [resetToken, setResetToken] = useState('');
   const [resetPassword, setResetPassword] = useState('');
   const [resetConfirm, setResetConfirm] = useState('');
@@ -49,17 +51,21 @@ export default function Login() {
 
   const handleForgotPassword = async () => {
     if (!forgotEmail.trim()) {
-      setError('Enter your email to receive reset link.');
+      setForgotMessage('Enter your email to receive a reset link.');
+      setForgotDelivered(false);
       return;
     }
     try {
       setSendingReset(true);
       setError('');
+      setForgotMessage('');
       const response: any = await apiClient.auth.forgotPassword(forgotEmail.trim());
-      setError(response?.message || 'If the email exists, a reset link has been sent.');
+      setForgotMessage(response?.message || 'If the email exists, a reset link has been sent.');
+      setForgotDelivered(Boolean(response?.delivered));
       setFallbackResetUrl(response?.resetUrl || '');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send reset link.');
+      setForgotMessage(err instanceof Error ? err.message : 'Failed to send reset link.');
+      setForgotDelivered(false);
       setFallbackResetUrl('');
     } finally {
       setSendingReset(false);
@@ -225,6 +231,15 @@ export default function Login() {
               >
                 {sendingReset ? 'Sending...' : 'Send Reset Link'}
               </button>
+              {forgotMessage && (
+                <div className={`text-xs rounded-lg px-3 py-2 border ${
+                  forgotDelivered
+                    ? 'bg-emerald-500/20 border-emerald-400/40 text-emerald-100'
+                    : 'bg-amber-500/20 border-amber-400/40 text-amber-100'
+                }`}>
+                  {forgotMessage}
+                </div>
+              )}
               {fallbackResetUrl && (
                 <a
                   href={fallbackResetUrl}

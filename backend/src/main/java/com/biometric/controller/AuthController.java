@@ -84,15 +84,22 @@ public class AuthController {
             String email = request != null ? request.getEmail() : null;
             PasswordResetService.ForgotPasswordResult result = passwordResetService.sendResetLink(email);
             String message = "If the email exists, a reset link has been sent.";
-            if (result.isAccountFound() && !result.isDelivered()) {
-                message = "Email service is not configured. Use the fallback reset link.";
+            if (result.isAccountFound() && result.isDelivered()) {
+                message = "Password reset link sent to your email.";
+            } else if (result.isAccountFound() && !result.isDelivered()) {
+                message = "Email delivery is unavailable. Use the fallback reset link below.";
             }
-            return ResponseEntity.ok(new ForgotPasswordResponse(message, result.getFallbackResetUrl()));
+            return ResponseEntity.ok(new ForgotPasswordResponse(
+                message,
+                result.getFallbackResetUrl(),
+                result.isDelivered()
+            ));
         } catch (Exception ex) {
             log.error("Forgot password flow failed unexpectedly", ex);
             return ResponseEntity.ok(new ForgotPasswordResponse(
                 "If the email exists, a reset link has been sent.",
-                null
+                null,
+                false
             ));
         }
     }
@@ -165,10 +172,12 @@ public class AuthController {
     public static class ForgotPasswordResponse {
         public String message;
         public String resetUrl;
+        public boolean delivered;
 
-        public ForgotPasswordResponse(String message, String resetUrl) {
+        public ForgotPasswordResponse(String message, String resetUrl, boolean delivered) {
             this.message = message;
             this.resetUrl = resetUrl;
+            this.delivered = delivered;
         }
 
         public String getMessage() { return message; }
@@ -176,6 +185,9 @@ public class AuthController {
 
         public String getResetUrl() { return resetUrl; }
         public void setResetUrl(String resetUrl) { this.resetUrl = resetUrl; }
+
+        public boolean isDelivered() { return delivered; }
+        public void setDelivered(boolean delivered) { this.delivered = delivered; }
     }
 
     public static class LoginResponse {
