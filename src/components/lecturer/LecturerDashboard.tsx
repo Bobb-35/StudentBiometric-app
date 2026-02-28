@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { BookOpen, Play, Square, Users, Fingerprint, Camera, ClipboardCheck, Clock, CheckCircle, XCircle, AlertCircle, Download } from 'lucide-react';
 import { AttendanceSession, AttendanceRecord } from '../../types';
@@ -30,6 +30,19 @@ export default function LecturerDashboard() {
     }
     setActiveSessionId(null);
   }, [activeSessionId, myActiveSessions, selectedCourse]);
+
+  useEffect(() => {
+    if (activeView !== 'records') return;
+    if (selectedSessionForRecords) return;
+    const firstLive = mySessions.find(s => s.status === 'active');
+    if (firstLive) {
+      setSelectedSessionForRecords(firstLive.id);
+      return;
+    }
+    if (mySessions.length > 0) {
+      setSelectedSessionForRecords(mySessions[0].id);
+    }
+  }, [activeView, mySessions, selectedSessionForRecords]);
 
   const activeSession =
     (activeSessionId ? myActiveSessions.find(s => s.id === activeSessionId) : null) ||
@@ -102,7 +115,7 @@ export default function LecturerDashboard() {
         verificationScore: score,
       };
       await addRecord(record);
-      setScanResult({ success: true, message: `${student.name} — Verified! (${score}% match)`, studentName: student.name });
+      setScanResult({ success: true, message: `${student.name} â€” Verified! (${score}% match)`, studentName: student.name });
     } else {
       setScanResult({ success: false, message: `Biometric mismatch for ${student.name}. Please retry.` });
     }
@@ -242,7 +255,7 @@ export default function LecturerDashboard() {
                         <h3 className="font-semibold text-slate-800 mt-2">{course.name}</h3>
                         <p className="text-xs text-slate-500">{course.department}</p>
                       </div>
-                      <div className="text-2xl">📚</div>
+                      <div className="text-2xl">ðŸ“š</div>
                     </div>
                     <div className="grid grid-cols-2 gap-3 mb-4">
                       <div className="bg-slate-50 rounded-xl p-3 text-center">
@@ -256,8 +269,8 @@ export default function LecturerDashboard() {
                     </div>
                     <div className="text-xs text-slate-500 space-y-1 mb-4">
                       <p className="flex items-center gap-1"><Clock className="w-3 h-3" /> {course.schedule}</p>
-                      <p>🏫 {course.room}</p>
-                      <p>📅 Today's Sessions: {todaySess.length}</p>
+                      <p>ðŸ« {course.room}</p>
+                      <p>ðŸ“… Today's Sessions: {todaySess.length}</p>
                     </div>
                     <button
                       onClick={() => { setSelectedCourse(course.id); setActiveView('session'); }}
@@ -292,7 +305,7 @@ export default function LecturerDashboard() {
                     <select value={selectedCourse || ''} onChange={e => setSelectedCourse(e.target.value)}
                       className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
                       <option value="">-- Select a course --</option>
-                      {myCourses.map(c => <option key={c.id} value={c.id}>{c.code} – {c.name}</option>)}
+                      {myCourses.map(c => <option key={c.id} value={c.id}>{c.code} â€“ {c.name}</option>)}
                     </select>
                   </div>
                   <div>
@@ -301,7 +314,7 @@ export default function LecturerDashboard() {
                       {(['fingerprint', 'face', 'both'] as const).map(type => (
                         <button key={type} onClick={() => setBiometricType(type)}
                           className={`py-3 rounded-xl border text-sm font-medium transition flex flex-col items-center gap-1 ${biometricType === type ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
-                          {type === 'fingerprint' ? <Fingerprint className="w-5 h-5" /> : type === 'face' ? <Camera className="w-5 h-5" /> : <span className="text-base">🔐</span>}
+                          {type === 'fingerprint' ? <Fingerprint className="w-5 h-5" /> : type === 'face' ? <Camera className="w-5 h-5" /> : <span className="text-base">ðŸ”</span>}
                           <span className="capitalize">{type}</span>
                         </button>
                       ))}
@@ -324,7 +337,7 @@ export default function LecturerDashboard() {
                         <span className="text-emerald-100 text-sm font-medium">LIVE SESSION</span>
                       </div>
                       <h2 className="text-xl font-bold">{courses.find(c => c.id === activeSession.courseId)?.name}</h2>
-                      <p className="text-emerald-100 text-sm mt-1">{courses.find(c => c.id === activeSession.courseId)?.code} • Started {activeSession.startTime}</p>
+                      <p className="text-emerald-100 text-sm mt-1">{courses.find(c => c.id === activeSession.courseId)?.code} â€¢ Started {activeSession.startTime}</p>
                     </div>
                     <button onClick={endSession}
                       className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition">
@@ -332,8 +345,8 @@ export default function LecturerDashboard() {
                     </button>
                   </div>
                   <div className="flex gap-4 mt-4 text-sm">
-                    <span>📊 {getSessionRecords(activeSession.id).length} signed in</span>
-                    <span>🔐 {biometricType}</span>
+                    <span>ðŸ“Š {getSessionRecords(activeSession.id).length} signed in</span>
+                    <span>ðŸ” {biometricType}</span>
                   </div>
                 </div>
 
@@ -373,7 +386,7 @@ export default function LecturerDashboard() {
                             {signed ? (
                               <div className="flex items-center gap-2">
                                 <span className={`text-xs px-2 py-1 rounded-full font-medium ${signed.status === 'present' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                                  {signed.status === 'present' ? '✓ Present' : '⏰ Late'}
+                                  {signed.status === 'present' ? 'âœ“ Present' : 'â° Late'}
                                 </span>
                                 <span className="text-xs text-slate-400">{signed.verificationScore}%</span>
                               </div>
@@ -407,6 +420,35 @@ export default function LecturerDashboard() {
         {/* RECORDS */}
         {activeView === 'records' && (
           <div className="space-y-5">
+            {myActiveSessions.length > 0 && (
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+                <p className="text-sm font-semibold text-amber-800 mb-2">
+                  Active Sessions ({myActiveSessions.length})
+                </p>
+                <div className="space-y-2">
+                  {myActiveSessions.map(sess => {
+                    const course = courses.find(c => c.id === sess.courseId);
+                    return (
+                      <div key={`active-${sess.id}`} className="flex items-center justify-between bg-white rounded-xl p-3">
+                        <div>
+                          <p className="text-sm font-medium text-slate-900">{course?.code} - {course?.name}</p>
+                          <p className="text-xs text-slate-500">{sess.date} - Started {sess.startTime}</p>
+                        </div>
+                        <button
+                          onClick={async () => {
+                            await closeSession(sess.id);
+                            setSelectedSessionForRecords(sess.id);
+                          }}
+                          className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-xl text-xs font-medium"
+                        >
+                          End Session
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             <div className="flex gap-3 overflow-x-auto pb-1">
               {mySessions.map(sess => {
                 const course = courses.find(c => c.id === sess.courseId);
@@ -414,9 +456,9 @@ export default function LecturerDashboard() {
                   <div key={sess.id} className="flex-shrink-0 flex items-center gap-2">
                     <button onClick={() => setSelectedSessionForRecords(sess.id)}
                       className={`px-4 py-2 rounded-xl text-sm font-medium border transition ${selectedSessionForRecords === sess.id ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
-                      {course?.code} � {sess.date}
+                      {course?.code} • {sess.date}
                       <span className={`ml-2 text-xs ${sess.status === 'active' ? 'text-emerald-400' : 'text-slate-400'}`}>
-                        {sess.status === 'active' ? '? Live' : '? Closed'}
+                        {sess.status === 'active' ? 'Live' : 'Closed'}
                       </span>
                     </button>
                     {sess.status === 'active' && (
@@ -449,7 +491,7 @@ export default function LecturerDashboard() {
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
                       <div>
                         <h3 className="font-bold text-slate-900">{course?.name}</h3>
-                        <p className="text-sm text-slate-500">{sess?.date} • {sess?.startTime} – {sess?.endTime || 'Ongoing'}</p>
+                        <p className="text-sm text-slate-500">{sess?.date} â€¢ {sess?.startTime} â€“ {sess?.endTime || 'Ongoing'}</p>
                       </div>
                       <div className="flex gap-3 text-center">
                         <div className="bg-emerald-50 rounded-xl px-4 py-2">
@@ -476,7 +518,7 @@ export default function LecturerDashboard() {
                             </div>
                             <div>
                               <p className="font-medium text-slate-800 text-sm">{getStudentName(rec.studentId)}</p>
-                              <p className="text-xs text-slate-400">{new Date(rec.timestamp).toLocaleTimeString()} • {rec.method}</p>
+                              <p className="text-xs text-slate-400">{new Date(rec.timestamp).toLocaleTimeString()} â€¢ {rec.method}</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
@@ -524,4 +566,5 @@ export default function LecturerDashboard() {
     </div>
   );
 }
+
 
