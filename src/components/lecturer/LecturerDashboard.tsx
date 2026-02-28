@@ -69,9 +69,11 @@ export default function LecturerDashboard() {
   const simulateScan = async (studentId: string, method: 'fingerprint' | 'face') => {
     const student = users.find(u => u.id === studentId);
     if (!student) return;
+    const currentSessionId = activeSession?.id || activeSessionId;
+    if (!currentSessionId || !activeSession) return;
 
     // Check already signed in
-    const alreadySigned = records.some(r => r.studentId === studentId && r.sessionId === activeSessionId);
+    const alreadySigned = records.some(r => r.studentId === studentId && r.sessionId === currentSessionId);
     if (alreadySigned) {
       setScanResult({ success: false, message: `${student.name} already marked attendance!` });
       setTimeout(() => setScanResult(null), 3000);
@@ -92,8 +94,8 @@ export default function LecturerDashboard() {
       const record: AttendanceRecord = {
         id: `rec-${Date.now()}`,
         studentId,
-        courseId: selectedCourse!,
-        sessionId: activeSessionId!,
+        courseId: activeSession.courseId,
+        sessionId: currentSessionId,
         timestamp: new Date().toISOString(),
         method,
         status: isLate ? 'late' : 'present',
@@ -330,7 +332,7 @@ export default function LecturerDashboard() {
                     </button>
                   </div>
                   <div className="flex gap-4 mt-4 text-sm">
-                    <span>📊 {getSessionRecords(activeSessionId!).length} signed in</span>
+                    <span>📊 {getSessionRecords(activeSession.id).length} signed in</span>
                     <span>🔐 {biometricType}</span>
                   </div>
                 </div>
@@ -354,7 +356,7 @@ export default function LecturerDashboard() {
                   <div className="divide-y divide-slate-50">
                     {courses.find(c => c.id === activeSession.courseId)?.enrolledStudents.map(stdId => {
                       const student = users.find(u => u.id === stdId);
-                      const signed = records.find(r => r.studentId === stdId && r.sessionId === activeSessionId);
+                      const signed = records.find(r => r.studentId === stdId && r.sessionId === activeSession.id);
                       const isScanning = scanning === stdId;
                       return (
                         <div key={stdId} className="flex items-center justify-between p-4 hover:bg-slate-50 transition">
@@ -409,13 +411,26 @@ export default function LecturerDashboard() {
               {mySessions.map(sess => {
                 const course = courses.find(c => c.id === sess.courseId);
                 return (
-                  <button key={sess.id} onClick={() => setSelectedSessionForRecords(sess.id)}
-                    className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm font-medium border transition ${selectedSessionForRecords === sess.id ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
-                    {course?.code} • {sess.date}
-                    <span className={`ml-2 text-xs ${sess.status === 'active' ? 'text-emerald-400' : 'text-slate-400'}`}>
-                      {sess.status === 'active' ? '● Live' : '✓ Closed'}
-                    </span>
-                  </button>
+                  <div key={sess.id} className="flex-shrink-0 flex items-center gap-2">
+                    <button onClick={() => setSelectedSessionForRecords(sess.id)}
+                      className={`px-4 py-2 rounded-xl text-sm font-medium border transition ${selectedSessionForRecords === sess.id ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
+                      {course?.code} � {sess.date}
+                      <span className={`ml-2 text-xs ${sess.status === 'active' ? 'text-emerald-400' : 'text-slate-400'}`}>
+                        {sess.status === 'active' ? '? Live' : '? Closed'}
+                      </span>
+                    </button>
+                    {sess.status === 'active' && (
+                      <button
+                        onClick={async () => {
+                          await closeSession(sess.id);
+                          setSelectedSessionForRecords(sess.id);
+                        }}
+                        className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-xl text-xs font-medium"
+                      >
+                        End
+                      </button>
+                    )}
+                  </div>
                 );
               })}
             </div>
@@ -509,3 +524,4 @@ export default function LecturerDashboard() {
     </div>
   );
 }
+

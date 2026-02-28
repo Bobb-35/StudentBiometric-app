@@ -518,14 +518,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(true);
       setError(null);
       const session = sessions.find(s => s.id === sessionId);
-      if (session) {
-        await apiClient.sessions.update(Number(sessionId), {
-          ...toBackendSession(session),
-          status: 'CLOSED',
-        });
-        await refreshAllData();
-        bumpDataVersion();
-      }
+      const payload = session
+        ? { ...toBackendSession(session), status: 'CLOSED' }
+        : { status: 'CLOSED' };
+      await apiClient.sessions.update(Number(sessionId), payload);
+      await refreshAllData();
+      bumpDataVersion();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to close session');
       throw err;
