@@ -485,6 +485,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const addSession = async (session: AttendanceSession): Promise<AttendanceSession | null> => {
     try {
       setIsLoading(true);
+      setError(null);
       const created = await apiClient.sessions.create(toBackendSession(session));
       const normalized = normalizeSession(created);
       setSessions(prev => {
@@ -505,6 +506,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const closeSession = async (sessionId: string) => {
     try {
       setIsLoading(true);
+      setError(null);
       const session = sessions.find(s => s.id === sessionId);
       if (session) {
         await apiClient.sessions.update(Number(sessionId), {
@@ -525,6 +527,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const addRecord = async (record: AttendanceRecord) => {
     try {
       setIsLoading(true);
+      setError(null);
       await apiClient.attendance.create(toBackendRecord(record));
       await refreshAllData();
       bumpDataVersion();
@@ -539,6 +542,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const addUser = async (user: User) => {
     try {
       setIsLoading(true);
+      setError(null);
       await apiClient.users.create(toBackendUser(user));
       await refreshAllData();
       bumpDataVersion();
@@ -553,6 +557,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const updateUser = async (user: User) => {
     try {
       setIsLoading(true);
+      setError(null);
       await apiClient.users.update(Number(user.id), toBackendUser(user));
       await refreshAllData();
       bumpDataVersion();
@@ -567,6 +572,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const deleteUser = async (userId: string) => {
     try {
       setIsLoading(true);
+      setError(null);
       await apiClient.users.delete(Number(userId));
       await refreshAllData();
       bumpDataVersion();
@@ -581,6 +587,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const addCourse = async (course: Course) => {
     try {
       setIsLoading(true);
+      setError(null);
       await apiClient.courses.create(toBackendCourse(course));
       await refreshAllData();
       bumpDataVersion();
@@ -595,6 +602,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const updateCourse = async (course: Course) => {
     try {
       setIsLoading(true);
+      setError(null);
       await apiClient.courses.update(Number(course.id), toBackendCourse(course));
       await refreshAllData();
       bumpDataVersion();
@@ -609,6 +617,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const deleteCourse = async (courseId: string) => {
     try {
       setIsLoading(true);
+      setError(null);
       await apiClient.courses.delete(Number(courseId));
       await refreshAllData();
       bumpDataVersion();
