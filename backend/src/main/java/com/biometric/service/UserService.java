@@ -21,9 +21,21 @@ public class UserService {
 
     @Transactional
     public User createUser(User user) {
+        if (isBlank(user.getName())) {
+            throw new RuntimeException("Name is required");
+        }
+        if (isBlank(user.getEmail())) {
+            throw new RuntimeException("Email is required");
+        }
+        if (isBlank(user.getPassword())) {
+            throw new RuntimeException("Password is required");
+        }
         if (user.getRole() == null) {
             throw new RuntimeException("User role is required");
         }
+
+        user.setEmail(user.getEmail().trim().toLowerCase());
+        user.setName(user.getName().trim());
 
         if (userRepository.findByEmail(user.getEmail()).isPresent()) {
             throw new RuntimeException("Email already exists");
@@ -49,8 +61,21 @@ public class UserService {
     @Transactional
     public User updateUser(Long id, User userDetails) {
         return userRepository.findById(id).map(user -> {
-            user.setName(userDetails.getName());
-            user.setEmail(userDetails.getEmail());
+            if (isBlank(userDetails.getName())) {
+                throw new RuntimeException("Name is required");
+            }
+            if (isBlank(userDetails.getEmail())) {
+                throw new RuntimeException("Email is required");
+            }
+            String normalizedEmail = userDetails.getEmail().trim().toLowerCase();
+            userRepository.findByEmail(normalizedEmail).ifPresent(existing -> {
+                if (!existing.getId().equals(user.getId())) {
+                    throw new RuntimeException("Email already exists");
+                }
+            });
+
+            user.setName(userDetails.getName().trim());
+            user.setEmail(normalizedEmail);
             user.setDepartment(userDetails.getDepartment());
             user.setAvatar(userDetails.getAvatar());
             if (!isBlank(userDetails.getFingerprintId())) {

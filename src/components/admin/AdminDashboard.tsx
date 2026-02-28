@@ -101,12 +101,17 @@ export default function AdminDashboard() {
     }
 
     try {
-      // Don't include ID - let backend generate it
+      const normalizedEmail = newUser.email.trim().toLowerCase();
+      if (users.some(u => u.email.toLowerCase() === normalizedEmail)) {
+        alert('A user with this email already exists.');
+        return;
+      }
+
       const user: any = {
         name: newUser.name,
-        email: newUser.email,
+        email: normalizedEmail,
         password: newUser.password,
-        role: newUser.role.toUpperCase(),
+        role: newUser.role,
         department: newUser.department,
       };
       

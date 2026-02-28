@@ -496,7 +496,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       return normalized;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create session');
-      return null;
+      throw err;
     } finally {
       setIsLoading(false);
     }
@@ -516,6 +516,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to close session');
+      throw err;
     } finally {
       setIsLoading(false);
     }
@@ -529,6 +530,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       bumpDataVersion();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create record');
+      throw err;
     } finally {
       setIsLoading(false);
     }
@@ -542,6 +544,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       bumpDataVersion();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create user');
+      throw err;
     } finally {
       setIsLoading(false);
     }
@@ -555,6 +558,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       bumpDataVersion();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update user');
+      throw err;
     } finally {
       setIsLoading(false);
     }
@@ -568,6 +572,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       bumpDataVersion();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete user');
+      throw err;
     } finally {
       setIsLoading(false);
     }
@@ -581,6 +586,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       bumpDataVersion();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create course');
+      throw err;
     } finally {
       setIsLoading(false);
     }
@@ -594,6 +600,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       bumpDataVersion();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update course');
+      throw err;
     } finally {
       setIsLoading(false);
     }
@@ -607,6 +614,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       bumpDataVersion();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete course');
+      throw err;
     } finally {
       setIsLoading(false);
     }

@@ -40,7 +40,12 @@ class ApiClient {
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({}));
-        throw new Error(error.message || `HTTP ${response.status}`);
+        const message =
+          error.message ||
+          error.error ||
+          (Array.isArray(error.errors) ? error.errors.join(', ') : null) ||
+          `HTTP ${response.status}`;
+        throw new Error(message);
       }
       if (response.status === 204) {
         return null as T;
