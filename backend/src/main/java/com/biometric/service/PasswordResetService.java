@@ -44,6 +44,10 @@ public class PasswordResetService {
 
     @Transactional
     public ForgotPasswordResult sendResetLink(String email) {
+        if (isBlank(email)) {
+            return new ForgotPasswordResult(false, null, false);
+        }
+
         Optional<User> userOpt = userRepository.findByEmail(email);
         if (userOpt.isEmpty()) {
             return new ForgotPasswordResult(false, null, false);

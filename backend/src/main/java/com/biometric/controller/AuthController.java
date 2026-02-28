@@ -3,6 +3,8 @@ package com.biometric.controller;
 import com.biometric.model.User;
 import com.biometric.service.PasswordResetService;
 import com.biometric.service.UserService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -11,6 +13,8 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/auth")
 @CrossOrigin(origins = {"http://localhost:5173", "http://localhost:3000"})
 public class AuthController {
+    private static final Logger log = LoggerFactory.getLogger(AuthController.class);
+
     @Autowired
     private UserService userService;
     @Autowired
@@ -76,12 +80,21 @@ public class AuthController {
 
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest request) {
-        PasswordResetService.ForgotPasswordResult result = passwordResetService.sendResetLink(request.getEmail());
-        String message = "If the email exists, a reset link has been sent.";
-        if (result.isAccountFound() && !result.isDelivered()) {
-            message = "Email service is not configured. Use the fallback reset link.";
+        try {
+            String email = request != null ? request.getEmail() : null;
+            PasswordResetService.ForgotPasswordResult result = passwordResetService.sendResetLink(email);
+            String message = "If the email exists, a reset link has been sent.";
+            if (result.isAccountFound() && !result.isDelivered()) {
+                message = "Email service is not configured. Use the fallback reset link.";
+            }
+            return ResponseEntity.ok(new ForgotPasswordResponse(message, result.getFallbackResetUrl()));
+        } catch (Exception ex) {
+            log.error("Forgot password flow failed unexpectedly", ex);
+            return ResponseEntity.ok(new ForgotPasswordResponse(
+                "If the email exists, a reset link has been sent.",
+                null
+            ));
         }
-        return ResponseEntity.ok(new ForgotPasswordResponse(message, result.getFallbackResetUrl()));
     }
 
     @PostMapping("/reset-password")
