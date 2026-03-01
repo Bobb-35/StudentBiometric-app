@@ -4,10 +4,10 @@ import com.biometric.model.PasswordResetToken;
 import com.biometric.model.User;
 import com.biometric.repository.PasswordResetTokenRepository;
 import com.biometric.repository.UserRepository;
+import com.resend.Resend;
+import com.resend.services.emails.model.SendEmailRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.slf4j.Logger;
@@ -25,8 +25,6 @@ public class PasswordResetService {
     private PasswordResetTokenRepository tokenRepository;
     @Autowired
     private UserRepository userRepository;
-    @Autowired(required = false)
-    private JavaMailSender mailSender;
     @Autowired
     private UserService userService;
 
@@ -36,11 +34,11 @@ public class PasswordResetService {
     @Value("${app.password-reset.expiry-minutes:30}")
     private long expiryMinutes;
 
-    @Value("${spring.mail.username:no-reply@biometric.local}")
+    @Value("${resend.from-email:onboarding@resend.dev}")
     private String fromEmail;
 
-    @Value("${spring.mail.host:}")
-    private String mailHost;
+    @Value("${resend.api-key:}")
+    private String resendApiKey;
 
     @Transactional
     public ForgotPasswordResult sendResetLink(String email) {
@@ -83,25 +81,29 @@ public class PasswordResetService {
     }
 
     private boolean sendMail(String to, String resetUrl) {
-        if (mailSender == null || isBlank(mailHost)) {
-            log.info("SMTP not configured. Password reset link for {}: {}", to, resetUrl);
+        if (isBlank(resendApiKey)) {
+            log.info("Resend API key not configured. Password reset link for {}: {}", to, resetUrl);
             return false;
         }
 
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(fromEmail);
-            message.setTo(to);
-            message.setSubject("Biometric Attendance Password Reset");
-            message.setText(
-                "You requested a password reset.\n\n" +
-                "Click the link below to reset your password:\n" + resetUrl + "\n\n" +
-                "This link expires in " + expiryMinutes + " minutes."
-            );
-            mailSender.send(message);
+            Resend resend = new Resend(resendApiKey);
+            SendEmailRequest request = SendEmailRequest.builder()
+                .from(fromEmail)
+                .to(to)
+                .subject("Biometric Attendance Password Reset")
+                .html(
+                    "<p>You requested a password reset.</p>" +
+                    "<p>Click the link below to reset your password:</p>" +
+                    "<p><a href=\"" + resetUrl + "\">Reset Password</a></p>" +
+                    "<p>This link expires in " + expiryMinutes + " minutes.</p>"
+                )
+                .build();
+
+            resend.emails().send(request);
             return true;
         } catch (Exception ex) {
-            log.error("Failed to send password reset email to {}. Reset link: {}", to, resetUrl, ex);
+            log.error("Failed to send password reset email via Resend to {}. Reset link: {}", to, resetUrl, ex);
             return false;
         }
     }

@@ -177,6 +177,10 @@ spring.datasource.password=root
 
 # CORS Settings
 cors.allowed-origins=http://localhost:5173,http://localhost:3000
+
+# Password reset email delivery (Resend)
+resend.api-key=${RESEND_API_KEY}
+resend.from-email=${RESEND_FROM_EMAIL}
 ```
 
 ## Database Schema
